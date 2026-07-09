@@ -13,8 +13,8 @@ interface Slide {
   cta: { label: string; href: string };
   ctaSecondary?: { label: string; href: string };
   visual:
-    | { type: "grid" }
-    | { type: "single"; emoji: string; bg: string; badgeLabel: string; badgeBg: string };
+  | { type: "grid" }
+  | { type: "single"; emoji: string; bg: string; badgeLabel: string; badgeBg: string };
 }
 
 const SLIDES: Slide[] = [
@@ -63,7 +63,7 @@ export default function Home() {
   return (
     <div className="flex flex-col w-full relative overflow-hidden bg-collage-cream">
       {/* Hero Carousel - Collage Pop */}
-      <section className="relative w-full pt-20 pb-20 md:pt-28 md:pb-28 px-6 md:px-8 overflow-hidden border-b-[3px] border-collage-ink">
+      <section className="relative w-full pt-10 pb-10 md:pt-16 md:pb-16 px-6 md:px-8 overflow-hidden border-b-[3px] border-collage-ink">
         <div className="absolute inset-0 text-collage-ink/10 halftone-dots pointer-events-none" />
         <div className="absolute top-10 -left-16 w-72 h-72 bg-collage-lime rounded-full blur-3xl opacity-40 pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-collage-pink rounded-full blur-3xl opacity-30 pointer-events-none" />
@@ -72,106 +72,119 @@ export default function Home() {
         <button
           onClick={() => setActiveSlide((current) => (current - 1 + SLIDES.length) % SLIDES.length)}
           aria-label="Banner anterior"
-          className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 items-center justify-center rounded-full border-[3px] border-collage-ink bg-white shadow-[3px_3px_0_0_var(--color-collage-ink)] hover:-translate-x-0.5 transition-transform"
+          className="hidden md:flex absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 items-center justify-center rounded-full border-[3px] border-collage-ink bg-white text-collage-ink shadow-[3px_3px_0_0_var(--color-collage-ink)] hover:-translate-x-1 transition-transform active:translate-y-0.5 active:shadow-[1px_1px_0_0_var(--color-collage-ink)]"
         >
-          ←
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6 pr-0.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
         </button>
         <button
           onClick={() => setActiveSlide((current) => (current + 1) % SLIDES.length)}
           aria-label="Siguiente banner"
-          className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 items-center justify-center rounded-full border-[3px] border-collage-ink bg-white shadow-[3px_3px_0_0_var(--color-collage-ink)] hover:translate-x-0.5 transition-transform"
+          className="hidden md:flex absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 items-center justify-center rounded-full border-[3px] border-collage-ink bg-white text-collage-ink shadow-[3px_3px_0_0_var(--color-collage-ink)] hover:translate-x-1 transition-transform active:translate-y-0.5 active:shadow-[1px_1px_0_0_var(--color-collage-ink)]"
         >
-          →
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6 pl-0.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
         </button>
 
         <div className="container mx-auto max-w-6xl relative z-10">
-          <div key={activeSlide} className="grid grid-cols-1 md:grid-cols-2 gap-14 md:gap-16 items-center animate-wiggle-in">
-            {/* Left Content */}
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-wrap gap-3">
-                {slide.badges.map((badge) => (
-                  <CollageSticker key={badge.label} bg={badge.bg} text={badge.text} rotate={badge.rotate}>
-                    {badge.label}
-                  </CollageSticker>
-                ))}
-              </div>
+          <div className="relative grid">
+            {SLIDES.map((slide, index) => (
+              <div
+                key={index}
+                className={`col-start-1 row-start-1 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12 items-center transition-all duration-500 ease-out ${index === activeSlide
+                    ? "opacity-100 translate-y-0 z-10"
+                    : "opacity-0 translate-y-8 z-0 pointer-events-none"
+                  }`}
+              >
+                {/* Left Content */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap gap-3">
+                    {slide.badges.map((badge) => (
+                      <CollageSticker key={badge.label} bg={badge.bg} text={badge.text} rotate={badge.rotate}>
+                        {badge.label}
+                      </CollageSticker>
+                    ))}
+                  </div>
 
-              <h1 className="font-display font-semibold text-5xl md:text-6xl lg:text-7xl leading-none text-collage-ink">
-                {slide.title}
-              </h1>
-              <p className="font-script text-3xl md:text-4xl text-collage-indigo -rotate-2 -mt-3">
-                {slide.script}
-              </p>
+                  <h1 className="font-display font-semibold text-5xl md:text-6xl lg:text-7xl leading-none text-collage-ink">
+                    {slide.title}
+                  </h1>
+                  <p className="font-script text-3xl md:text-4xl text-collage-indigo -rotate-2 -mt-3">
+                    {slide.script}
+                  </p>
 
-              <p className="text-lg md:text-xl text-collage-ink/70 max-w-md leading-relaxed font-medium">
-                {slide.desc}
-              </p>
+                  <p className="text-lg md:text-xl text-collage-ink/70 max-w-md leading-relaxed font-medium">
+                    {slide.desc}
+                  </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Link
-                  href={slide.cta.href}
-                  className="inline-flex items-center justify-center px-8 py-4 bg-collage-indigo text-white font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[5px_5px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[3px_3px_0_0_var(--color-collage-ink)]"
-                >
-                  {slide.cta.label}
-                </Link>
+                  <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                    <Link
+                      href={slide.cta.href}
+                      className="inline-flex items-center justify-center px-8 py-3 bg-collage-indigo text-white font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[5px_5px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[3px_3px_0_0_var(--color-collage-ink)]"
+                    >
+                      {slide.cta.label}
+                    </Link>
 
-                {slide.ctaSecondary && (
-                  <Link
-                    href={slide.ctaSecondary.href}
-                    className="inline-flex items-center justify-center px-8 py-4 bg-white text-collage-ink font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[5px_5px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[3px_3px_0_0_var(--color-collage-ink)]"
-                  >
-                    {slide.ctaSecondary.label}
-                  </Link>
+                    {slide.ctaSecondary && (
+                      <Link
+                        href={slide.ctaSecondary.href}
+                        className="inline-flex items-center justify-center px-8 py-3 bg-white text-collage-ink font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[5px_5px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[3px_3px_0_0_var(--color-collage-ink)]"
+                      >
+                        {slide.ctaSecondary.label}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Visual */}
+                {slide.visual.type === "grid" ? (
+                  <div className="relative grid grid-cols-2 gap-5 md:gap-6 px-4">
+                    <CollageFrame
+                      emoji="🍜"
+                      bg="bg-collage-orange"
+                      rotate={-6}
+                      className="col-span-1 mt-6"
+                      badge={<CollageSticker bg="bg-collage-cream" rotate={-10}>🔥 Picante</CollageSticker>}
+                      badgePosition="top-left"
+                    />
+                    <CollageFrame emoji="🍗" bg="bg-collage-indigo" rotate={5} className="col-span-1" />
+                    <CollageFrame
+                      emoji="🍶"
+                      bg="bg-collage-pink"
+                      rotate={4}
+                      className="col-span-1"
+                      badge={<CollageSticker bg="bg-collage-lime" rotate={8}>2x1</CollageSticker>}
+                      badgePosition="bottom-right"
+                    />
+                    <CollageFrame emoji="🥟" bg="bg-collage-lime" rotate={-4} className="col-span-1 mt-6" />
+                  </div>
+                ) : (
+                  <div className="flex justify-center px-8 md:px-16">
+                    <CollageFrame
+                      emoji={slide.visual.emoji}
+                      bg={slide.visual.bg}
+                      rotate={-4}
+                      className="w-full max-w-xs"
+                      badge={<CollageSticker bg={slide.visual.badgeBg} rotate={-10}>{slide.visual.badgeLabel}</CollageSticker>}
+                      badgePosition="top-left"
+                    />
+                  </div>
                 )}
               </div>
-            </div>
-
-            {/* Right Visual */}
-            {slide.visual.type === "grid" ? (
-              <div className="relative grid grid-cols-2 gap-5 md:gap-6 px-4">
-                <CollageFrame
-                  emoji="🍜"
-                  bg="bg-collage-orange"
-                  rotate={-6}
-                  className="col-span-1 mt-6"
-                  badge={<CollageSticker bg="bg-collage-cream" rotate={-10}>🔥 Picante</CollageSticker>}
-                  badgePosition="top-left"
-                />
-                <CollageFrame emoji="🍗" bg="bg-collage-indigo" rotate={5} className="col-span-1" />
-                <CollageFrame
-                  emoji="🍶"
-                  bg="bg-collage-pink"
-                  rotate={4}
-                  className="col-span-1"
-                  badge={<CollageSticker bg="bg-collage-lime" rotate={8}>2x1</CollageSticker>}
-                  badgePosition="bottom-right"
-                />
-                <CollageFrame emoji="🥟" bg="bg-collage-lime" rotate={-4} className="col-span-1 mt-6" />
-              </div>
-            ) : (
-              <div className="flex justify-center px-8 md:px-16">
-                <CollageFrame
-                  emoji={slide.visual.emoji}
-                  bg={slide.visual.bg}
-                  rotate={-4}
-                  className="w-full max-w-xs"
-                  badge={<CollageSticker bg={slide.visual.badgeBg} rotate={-10}>{slide.visual.badgeLabel}</CollageSticker>}
-                  badgePosition="top-left"
-                />
-              </div>
-            )}
+            ))}
           </div>
 
           {/* Dots */}
-          <div className="flex justify-center gap-2 mt-12 md:mt-16">
+          <div className="flex justify-center gap-2 mt-8 md:mt-10">
             {SLIDES.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setActiveSlide(index)}
                 aria-label={`Ir al banner ${index + 1}`}
-                className={`h-3 rounded-full border-2 border-collage-ink transition-all ${
-                  index === activeSlide ? "w-8 bg-collage-indigo" : "w-3 bg-white"
-                }`}
+                className={`h-3 rounded-full border-2 border-collage-ink transition-all ${index === activeSlide ? "w-8 bg-collage-indigo" : "w-3 bg-white"
+                  }`}
               />
             ))}
           </div>
