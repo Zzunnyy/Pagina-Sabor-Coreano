@@ -63,23 +63,34 @@ export default function ProductosPage() {
 
   return (
     <div className="min-h-screen bg-collage-cream">
-      <div className="relative overflow-hidden border-b-[3px] border-collage-ink">
+      <section className="relative w-full pt-20 pb-20 md:pt-28 md:pb-28 px-6 md:px-8 overflow-hidden border-b-[3px] border-collage-ink">
         <div className="absolute inset-0 text-collage-ink/10 halftone-dots pointer-events-none" />
         <div className="absolute -top-10 -right-10 w-56 h-56 bg-collage-lime rounded-full blur-3xl opacity-40 pointer-events-none" />
         <div className="absolute -bottom-16 left-10 w-64 h-64 bg-collage-pink rounded-full blur-3xl opacity-30 pointer-events-none" />
 
-        <div className="container mx-auto px-6 md:px-8 py-14 md:py-20 relative z-10">
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="flex flex-wrap items-center gap-3 mb-4 justify-center">
             <CollageSticker bg="bg-collage-orange" text="text-white" rotate={-6}>매콤 · Picante</CollageSticker>
             <CollageSticker bg="bg-collage-indigo" text="text-white" rotate={4}>신선 · Fresco</CollageSticker>
           </div>
-          <h1 className="font-display font-semibold text-5xl md:text-7xl text-collage-ink leading-none mb-3">
-            Nuestro <span className="text-collage-pink">Catálogo</span>
-          </h1>
-          <p className="font-script text-2xl md:text-3xl text-collage-indigo -rotate-2 inline-block">
-            saborea la auténtica cocina coreana
-          </p>
+          <div className="text-center">
+            <h1 className="font-display font-semibold text-5xl md:text-6xl lg:text-7xl leading-none text-collage-ink mb-3">
+              Nuestro <span className="text-collage-pink">Catálogo</span>
+            </h1>
+            <p className="font-script text-2xl md:text-3xl text-collage-indigo -rotate-2 inline-block">
+              saborea la auténtica cocina coreana
+            </p>
+          </div>
         </div>
+      </section>
+
+      {/* Color block strip */}
+      <div className="flex h-6 md:h-8">
+        <div className="flex-1 bg-collage-lime" />
+        <div className="flex-1 bg-collage-orange" />
+        <div className="flex-1 bg-collage-indigo" />
+        <div className="flex-1 bg-collage-pink" />
+        <div className="flex-1 bg-collage-cream" />
       </div>
 
       <div className="container mx-auto px-6 md:px-8 py-12 md:py-16">
