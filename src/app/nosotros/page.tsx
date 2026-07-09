@@ -16,7 +16,7 @@ export default function Nosotros() {
               Nuestra <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-amber-600">Historia</span>
             </h1>
             <p className={`text-xl ${isDark ? 'text-gray-400' : 'text-gray-600'} max-w-2xl mx-auto`}>
-              Pasión, tradición y el sabor auténtico de Corea en cada plato
+              Pasión, tradición y el sabor auténtico de Corea
             </p>
           </div>
         </div>
@@ -38,10 +38,10 @@ export default function Nosotros() {
             <div className="flex flex-col gap-6">
               <h2 className={`text-4xl font-black ${isDark ? 'text-white' : 'text-black'}`}>¿Cómo empezó todo?</h2>
               <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'} leading-relaxed`}>
-                Sabor Coreano nació de una pasión genuina por compartir la auténtica gastronomía coreana con Chile. Lo que comenzó como un pequeño emprendimiento familiar, se ha convertido en un movimiento dedicado a llevar los sabores más icónicos de Corea del Sur directamente a tu mesa.
+                TEXTO GENERICO
               </p>
               <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'} leading-relaxed`}>
-                Cada receta, cada ingrediente, cada plato es cuidadosamente seleccionado para garantizar la máxima calidad y autenticidad. Creemos que la comida es más que nutrición: es cultura, tradición y amor expresado en cada bocado.
+                TEXTO GENERICO
               </p>
             </div>
           </div>

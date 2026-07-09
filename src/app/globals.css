@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --color-collage-lime: #b8d92b;
+  --color-collage-orange: #f15a29;
+  --color-collage-indigo: #211a6e;
+  --color-collage-pink: #e94f95;
+  --color-collage-cream: #f7ecd0;
+  --color-collage-ink: #18142c;
+
+  --font-display: var(--font-fredoka);
+  --font-script: var(--font-caveat);
+}
+
 :root {
   /* Light theme */
   --color-primary: #dc2626;
@@ -125,4 +137,24 @@ a:focus-visible {
 button:focus:not(:focus-visible),
 a:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* Collage pop decorative helpers */
+.halftone-dots {
+  background-image: radial-gradient(currentColor 1.5px, transparent 1.5px);
+  background-size: 10px 10px;
+}
+
+.text-stroke-ink {
+  -webkit-text-stroke: 2px var(--color-collage-ink);
+  paint-order: stroke fill;
+}
+
+@keyframes wiggle-in {
+  from { opacity: 0; transform: translateY(16px) rotate(0deg) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) rotate(var(--tilt, 0deg)) scale(1); }
+}
+
+.animate-wiggle-in {
+  animation: wiggle-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
