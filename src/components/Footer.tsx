@@ -54,7 +54,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
           <p>&copy; {new Date().getFullYear()} Sabor Coreano. Todos los derechos reservados.</p>
-          <p>Hecho con ❤️ en Chile</p>
+          <p>Hecho en Chile</p>
         </div>
       </div>
     </footer>
