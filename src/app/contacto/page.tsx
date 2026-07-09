@@ -136,12 +136,11 @@ export default function Contacto() {
                     value={formData.asunto}
                     onChange={handleChange}
                     required
-                    aria-label="Selecciona un asunto"
                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 transition-all ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                   >
                     <option value="">Selecciona un asunto</option>
                     <option value="pedido">Consulta sobre pedido</option>
-                    <option value="catalogo">Pregunta sobre catalogo</option>
+                    <option value="menu">Pregunta sobre menú</option>
                     <option value="delivery">Información de delivery</option>
                     <option value="otro">Otro</option>
                   </select>
