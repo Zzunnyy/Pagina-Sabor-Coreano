@@ -3,13 +3,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 
-const CATEGORIES = [
-  { slug: 'fermentados', label: 'Fermentados', emoji: '🥬', bg: 'bg-collage-pink' },
-  { slug: 'instantaneos', label: 'Instantáneos', emoji: '🍜', bg: 'bg-collage-orange' },
-  { slug: 'snacks', label: 'Snacks', emoji: '🍢', bg: 'bg-collage-lime' },
-  { slug: 'bebidas', label: 'Bebidas', emoji: '🍶', bg: 'bg-collage-indigo' },
-];
-
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
@@ -30,62 +23,23 @@ export default function Navbar() {
             Sabor Coreano
           </span>
         </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex gap-8 font-semibold absolute left-1/2 -translate-x-1/2">
-          <div className="group/menu relative">
-            <Link
-              href="/productos"
-              className={`transition-colors duration-300 relative group ${isDark ? 'text-slate-300 hover:text-red-500' : 'text-gray-700 hover:text-red-600'
-                }`}
-            >
-              Catalogo
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 group-hover:w-full transition-all duration-300"></span>
-            </Link>
-
-            {/* Mega menu de categorías */}
-            <div className="absolute top-full left-0 pt-4 opacity-0 invisible translate-y-1 group-hover/menu:opacity-100 group-hover/menu:visible group-hover/menu:translate-y-0 transition-all duration-200">
-              <div className="flex gap-2 p-3 bg-white border-[3px] border-collage-ink rounded-2xl shadow-[5px_5px_0_0_var(--color-collage-ink)]">
-                {CATEGORIES.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    href="/productos"
-                    className="flex flex-col items-center gap-2 px-3 py-2 rounded-xl hover:bg-collage-cream transition-colors"
-                  >
-                    <div className={`w-10 h-10 rounded-full border-2 border-collage-ink ${cat.bg} flex items-center justify-center text-lg`}>
-                      {cat.emoji}
-                    </div>
-                    <span className="text-xs font-semibold text-collage-ink whitespace-nowrap">{cat.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-          <Link
-            href="/nosotros"
-            className={`transition-colors duration-300 relative group ${isDark ? 'text-slate-300 hover:text-red-500' : 'text-gray-700 hover:text-red-600'
-              }`}
-          >
-            Sobre Nosotros
-            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 group-hover:w-full transition-all duration-300"></span>
-          </Link>
-          <Link
-            href="/contacto"
-            className={`transition-colors duration-300 relative group ${isDark ? 'text-slate-300 hover:text-red-500' : 'text-gray-700 hover:text-red-600'
-              }`}
-          >
-            Contacto
-            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 group-hover:w-full transition-all duration-300"></span>
-          </Link>
-        </nav>
-
         {/* Right Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <button
-            className="text-white px-6 py-2 rounded-xl font-semibold transition-all duration-300 active:scale-95 hover:shadow-md bg-red-600 hover:bg-red-700"
+          <a
+            href="https://wa.me/56912345678"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
+          >
+            <img src="/iconos/whatsapp.webp" alt="WhatsApp" className="w-6 h-6 object-contain" />
+            Contáctanos
+          </a>
+          <Link
+            href="/login"
+            className="px-6 py-2.5 bg-collage-indigo hover:bg-collage-pink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
           >
             Iniciar Sesión
-          </button>
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
@@ -124,34 +78,6 @@ export default function Navbar() {
           >
             <nav className="flex flex-col gap-3 font-semibold">
               <Link
-                href="/productos"
-                onClick={() => setIsOpen(false)}
-                className={`py-2 px-3 rounded-lg transition-all ${isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-red-500' : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
-                  }`}
-              >
-                Catalogo
-              </Link>
-              <div className="flex flex-wrap gap-2 px-3 pb-2">
-                {CATEGORIES.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    href="/productos"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-collage-ink bg-collage-cream text-xs font-semibold text-collage-ink"
-                  >
-                    <span>{cat.emoji}</span>{cat.label}
-                  </Link>
-                ))}
-              </div>
-              <Link
-                href="/nosotros"
-                onClick={() => setIsOpen(false)}
-                className={`py-2 px-3 rounded-lg transition-all ${isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-red-500' : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
-                  }`}
-              >
-                Sobre Nosotros
-              </Link>
-              <Link
                 href="/contacto"
                 onClick={() => setIsOpen(false)}
                 className={`py-2 px-3 rounded-lg transition-all ${isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-red-500' : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
@@ -160,11 +86,22 @@ export default function Navbar() {
                 Contacto
               </Link>
             </nav>
-            <button
-              className="w-full text-white px-6 py-3 rounded-xl font-semibold transition-all bg-red-600 hover:bg-red-700 active:scale-95 mt-4"
-            >
-              Iniciar Sesión
-            </button>
+            <div className="flex flex-col gap-3 mt-4">
+              <a
+                href="https://wa.me/56912345678"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 text-white px-6 py-3 rounded-xl font-semibold transition-all bg-green-500 hover:bg-green-600 active:scale-95"
+              >
+                <img src="/iconos/whatsapp.webp" alt="WhatsApp" className="w-6 h-6 object-contain" />
+                Contáctanos
+              </a>
+              <button
+                className="w-full text-white px-6 py-3 rounded-xl font-semibold transition-all bg-red-600 hover:bg-red-700 active:scale-95"
+              >
+                Iniciar Sesión
+              </button>
+            </div>
           </div>
         )}
       </div>

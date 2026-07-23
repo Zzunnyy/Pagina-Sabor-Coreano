@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
+import ProductCard from "@/components/ProductCard";
 
 interface Slide {
   badges: { label: string; bg: string; text?: string; rotate: number }[];
@@ -48,17 +49,61 @@ const SLIDES: Slide[] = [
   },
 ];
 
+const CATEGORIES = [
+  { slug: "todos", label: "Todos" },
+  { slug: "fermentados", label: "Fermentados" },
+  { slug: "instantaneos", label: "Instantáneos" },
+  { slug: "snacks", label: "Snacks" },
+];
+
+const MOCK_PRODUCTS = [
+  {
+    id: "1",
+    name: "Kimchi Tradicional",
+    description: "Kimchi casero fermentado, picante y crujiente.",
+    price: 15.99,
+    imageUrl: "/Imagenes/kimchi.webp",
+    category: "fermentados",
+    isNew: true,
+  },
+  {
+    id: "2",
+    name: "Tteokbokki Picante",
+    description: "Pasteles de arroz masticables en salsa dulce y picante.",
+    price: 12.50,
+    imageUrl: "/Imagenes/tteok.jpg",
+    category: "snacks",
+  },
+  {
+    id: "3",
+    name: "Ramen Coreano (5 pack)",
+    description: "Paquete de fideos instantáneos picantes.",
+    price: 8.99,
+    imageUrl: "/Imagenes/Ramen.jpg",
+    category: "instantaneos",
+  },
+];
+
 export default function Home() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("todos");
 
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((current) => (current + 1) % SLIDES.length);
-    }, 6000);
+    }, 8000);
     return () => clearInterval(timer);
   }, []);
 
   const slide = SLIDES[activeSlide];
+
+  const filteredProducts = MOCK_PRODUCTS.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === "todos" || product.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="flex flex-col w-full relative overflow-hidden bg-collage-cream">
@@ -94,8 +139,8 @@ export default function Home() {
               <div
                 key={index}
                 className={`col-start-1 row-start-1 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12 items-center transition-all duration-500 ease-out ${index === activeSlide
-                    ? "opacity-100 translate-y-0 z-10"
-                    : "opacity-0 translate-y-8 z-0 pointer-events-none"
+                  ? "opacity-100 translate-y-0 z-10"
+                  : "opacity-0 translate-y-8 z-0 pointer-events-none"
                   }`}
               >
                 {/* Left Content */}
@@ -142,7 +187,7 @@ export default function Home() {
                 {slide.visual.type === "grid" ? (
                   <div className="relative grid grid-cols-2 gap-5 md:gap-6 px-4">
                     <CollageFrame
-                      emoji="🍜"
+                      imageUrl="/productos/sushi.jpg"
                       bg="bg-collage-orange"
                       rotate={-6}
                       className="col-span-1 mt-6"
@@ -191,89 +236,58 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Color block strip */}
-      <div className="flex h-6 md:h-8">
-        <div className="flex-1 bg-collage-lime" />
-        <div className="flex-1 bg-collage-orange" />
-        <div className="flex-1 bg-collage-indigo" />
-        <div className="flex-1 bg-collage-pink" />
-        <div className="flex-1 bg-collage-cream" />
-      </div>
-
-      {/* Features Section */}
-      <section className="relative w-full py-20 md:py-28 px-6 md:px-8 bg-white border-b-[3px] border-collage-ink">
+      {/* Product Search & Listing */}
+      <section className="relative w-full py-16 px-6 md:px-8 bg-white border-b-[3px] border-collage-ink">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl md:text-5xl text-collage-ink mb-3">
-              ¿Por qué elegir <span className="text-collage-pink">Sabor Coreano</span>?
-            </h2>
-            <p className="font-script text-2xl text-collage-indigo">
-              tradición, calidad y rapidez
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                emoji: "🔥",
-                bg: "bg-collage-orange",
-                title: "Recetas Auténticas",
-                desc: "Preparadas con técnicas tradicionales coreanas y pasión por la gastronomía",
-                rotate: -2,
-              },
-              {
-                emoji: "🌟",
-                bg: "bg-collage-lime",
-                title: "Ingredientes Premium",
-                desc: "Seleccionados especialmente de Corea del Sur con máxima calidad",
-                rotate: 1,
-              },
-              {
-                emoji: "⚡",
-                bg: "bg-collage-pink",
-                title: "Entrega Rápida",
-                desc: "Servicio de delivery rápido para que disfrutes caliente en casa",
-                rotate: -1,
-              },
-            ].map((feature) => (
-              <div
-                key={feature.title}
-                className="p-8 bg-collage-cream rounded-[2rem] border-[3px] border-collage-ink shadow-[6px_6px_0_0_var(--color-collage-ink)] transition-transform duration-300 hover:-translate-y-1"
-                style={{ transform: `rotate(${feature.rotate}deg)` }}
-              >
-                <div className={`w-16 h-16 mb-5 rounded-2xl border-[3px] border-collage-ink ${feature.bg} flex items-center justify-center text-3xl`}>
-                  {feature.emoji}
-                </div>
-                <h3 className="font-display font-semibold text-xl text-collage-ink mb-3">{feature.title}</h3>
-                <p className="text-collage-ink/70 leading-relaxed">{feature.desc}</p>
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-16">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Busca tus productos favoritos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-6 py-4 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] focus:outline-none focus:-translate-y-1 focus:shadow-[6px_6px_0_0_var(--color-collage-ink)] transition-all font-medium text-lg placeholder-collage-ink/50"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
+                🔍
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Category Filters & Product Grid */}
+          <div className="flex flex-col">
+            <div className="flex flex-wrap gap-3 mb-10 justify-center">
+              {CATEGORIES.map((cat) => (
+                <button key={cat.slug} onClick={() => setActiveCategory(cat.slug)}>
+                  <CollageSticker
+                    bg={activeCategory === cat.slug ? "bg-collage-indigo" : "bg-white"}
+                    text={activeCategory === cat.slug ? "text-white" : "text-collage-ink"}
+                    rotate={activeCategory === cat.slug ? -2 : 0}
+                    className="cursor-pointer transition-transform hover:-translate-y-0.5"
+                  >
+                    {cat.label}
+                  </CollageSticker>
+                </button>
+              ))}
+            </div>
+
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-collage-ink/60 text-xl font-medium">No se encontraron productos para "{searchQuery}"</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 md:gap-10">
+                {filteredProducts.map((product: any) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative w-full py-24 md:py-28 px-6 md:px-8 bg-collage-indigo overflow-hidden">
-        <div className="absolute inset-0 text-white/10 halftone-dots pointer-events-none" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-collage-pink rounded-full blur-3xl opacity-30 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-collage-lime rounded-full blur-3xl opacity-20 pointer-events-none" />
 
-        <div className="container mx-auto max-w-4xl relative z-10 text-center">
-          <h2 className="font-display font-semibold text-4xl md:text-5xl text-white mb-4">¿Listo para probar?</h2>
-          <p className="font-script text-2xl md:text-3xl text-collage-lime mb-8 -rotate-1 inline-block">
-            explora nuestro catálogo completo
-          </p>
-
-          <div>
-            <Link
-              href="/productos"
-              className="inline-flex items-center justify-center px-10 py-5 bg-collage-cream hover:bg-white text-collage-ink font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[6px_6px_0_0_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-lg"
-            >
-              Explorar Catálogo Completo
-            </Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
