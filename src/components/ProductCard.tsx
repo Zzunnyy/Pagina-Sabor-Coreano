@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
+import { useCart } from "@/context/CartContext";
 
 interface ProductCardProps {
   product: {
@@ -41,6 +42,8 @@ function pickEmoji(id: string, name: string) {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { addToCart, toggleCart } = useCart();
+  
   const bg = pickFromId(product.id, PALETTE);
   const emoji = pickEmoji(product.id, product.name);
   const rotate = (product.id.charCodeAt(0) % 5) - 2;
@@ -77,6 +80,16 @@ export default function ProductCard({ product }: ProductCardProps) {
             ${product.price.toFixed(2)}
           </CollageSticker>
           <button
+            onClick={(e) => {
+              e.preventDefault();
+              addToCart({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                imageUrl: product.imageUrl,
+              });
+              toggleCart();
+            }}
             className="w-10 h-10 flex items-center justify-center rounded-full border-[3px] border-collage-ink bg-collage-indigo text-white shadow-[3px_3px_0_0_var(--color-collage-ink)] transition-transform hover:scale-110 hover:rotate-12 active:scale-95"
             title="Añadir al carrito"
           >

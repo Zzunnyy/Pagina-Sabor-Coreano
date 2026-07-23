@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import CollageSticker from "@/components/CollageSticker";
 
 export default function Contacto() {
@@ -63,14 +64,7 @@ export default function Contacto() {
         </div>
       </section>
 
-      {/* Color block strip */}
-      <div className="flex h-6 md:h-8">
-        <div className="flex-1 bg-collage-lime" />
-        <div className="flex-1 bg-collage-orange" />
-        <div className="flex-1 bg-collage-indigo" />
-        <div className="flex-1 bg-collage-pink" />
-        <div className="flex-1 bg-collage-cream" />
-      </div>
+
 
       {/* Contact Info Cards */}
       <section className="relative w-full py-16 md:py-20 px-6 md:px-8 bg-white border-b-[3px] border-collage-ink">
@@ -218,28 +212,6 @@ export default function Contacto() {
                 </div>
               </div>
 
-              {/* Redes Sociales */}
-              <div className="p-8 bg-white rounded-[2rem] border-[3px] border-collage-ink shadow-[6px_6px_0_0_var(--color-collage-ink)]">
-                <CollageSticker bg="bg-collage-pink" text="text-white" rotate={4} className="mb-4">📱 Redes</CollageSticker>
-                <h2 className="font-display font-semibold text-2xl text-collage-ink mb-6">Síguenos</h2>
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { icon: "📘", name: "Facebook", bg: "bg-collage-indigo" },
-                    { icon: "📷", name: "Instagram", bg: "bg-collage-pink" },
-                    { icon: "🐦", name: "Twitter", bg: "bg-collage-lime" },
-                    { icon: "🎵", name: "TikTok", bg: "bg-collage-orange" },
-                  ].map((social, idx) => (
-                    <a
-                      key={idx}
-                      href="#"
-                      className={`aspect-square rounded-2xl border-[3px] border-collage-ink ${social.bg} flex items-center justify-center text-3xl shadow-[3px_3px_0_0_var(--color-collage-ink)] transition-all duration-300 hover:scale-110 hover:-rotate-6`}
-                      title={social.name}
-                    >
-                      {social.icon}
-                    </a>
-                  ))}
-                </div>
-              </div>
 
               {/* FAQ Promo */}
               <div className="p-8 bg-collage-lime/30 rounded-[2rem] border-[3px] border-collage-ink shadow-[6px_6px_0_0_var(--color-collage-ink)]">
@@ -253,44 +225,6 @@ export default function Contacto() {
           </div>
         </div>
       </section>
-
-      {/* CTA Section */}
-      <section className="relative w-full py-24 md:py-28 px-6 md:px-8 bg-collage-indigo overflow-hidden border-t-[3px] border-collage-ink">
-        <div className="absolute inset-0 text-white/10 halftone-dots pointer-events-none" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-collage-pink rounded-full blur-3xl opacity-30 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-collage-lime rounded-full blur-3xl opacity-20 pointer-events-none" />
-
-        <div className="container mx-auto max-w-4xl relative z-10 text-center">
-          <h2 className="font-display font-semibold text-4xl md:text-5xl text-white mb-4">¿No encontraste lo que buscas?</h2>
-          <p className="font-script text-2xl md:text-3xl text-collage-lime mb-8 -rotate-1 inline-block">
-            nuestro equipo está disponible
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="tel:+56912345678"
-              className="inline-flex items-center justify-center px-10 py-5 bg-collage-cream hover:bg-white text-collage-ink font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[6px_6px_0_0_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-lg"
-            >
-              Llamar Ahora
-            </a>
-            <a
-              href="mailto:hola@saborcoreano.cl"
-              className="inline-flex items-center justify-center px-10 py-5 bg-collage-pink hover:bg-collage-orange text-white font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[6px_6px_0_0_rgba(0,0,0,0.3)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-lg"
-            >
-              Enviar Email
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Color block strip */}
-      <div className="flex h-6 md:h-8">
-        <div className="flex-1 bg-collage-lime" />
-        <div className="flex-1 bg-collage-orange" />
-        <div className="flex-1 bg-collage-indigo" />
-        <div className="flex-1 bg-collage-pink" />
-        <div className="flex-1 bg-collage-cream" />
-      </div>
     </div>
   );
 }
