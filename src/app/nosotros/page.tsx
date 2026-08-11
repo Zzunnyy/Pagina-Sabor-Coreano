@@ -123,10 +123,6 @@ export default function Nosotros() {
           </div>
         </div>
       </section>
-
-
-
-
     </div>
   );
 }
