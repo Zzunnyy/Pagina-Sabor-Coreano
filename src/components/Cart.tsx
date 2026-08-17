@@ -41,9 +41,8 @@ export default function Cart() {
 
       {/* Cart Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-collage-cream border-l-[3px] border-collage-ink shadow-[-8px_0_0_0_rgba(0,0,0,0.1)] z-[80] transform transition-transform duration-300 ease-in-out flex flex-col ${
-          isCartOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-collage-cream border-l-[3px] border-collage-ink shadow-[-8px_0_0_0_rgba(0,0,0,0.1)] z-[80] transform transition-transform duration-300 ease-in-out flex flex-col ${isCartOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b-[3px] border-collage-ink bg-white">
@@ -67,7 +66,7 @@ export default function Cart() {
         {/* Items List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-collage-cream/50 relative">
           <div className="absolute inset-0 text-collage-ink/5 halftone-dots pointer-events-none" />
-          
+
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center relative z-10 opacity-70">
               <span className="text-6xl mb-4">🥡</span>
@@ -90,9 +89,14 @@ export default function Cart() {
                   </div>
                   <div className="flex flex-col flex-1 justify-between">
                     <div className="flex justify-between items-start gap-2">
-                      <h3 className="font-display font-semibold text-collage-ink leading-tight">
-                        {item.name}
-                      </h3>
+                      <div className="flex flex-col flex-1 pr-2">
+                        <h3 className="font-display font-semibold text-collage-ink leading-tight">
+                          {item.name}
+                        </h3>
+                        {item.description && (
+                          <p className="text-xs text-collage-ink/70 mt-1 line-clamp-2">{item.description}</p>
+                        )}
+                      </div>
                       <button
                         onClick={() => removeFromCart(item.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
@@ -107,17 +111,17 @@ export default function Cart() {
                       <span className="font-bold text-collage-indigo">
                         ${(item.price * item.quantity).toFixed(2)}
                       </span>
-                      <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border-2 border-collage-ink/10">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm hover:bg-gray-100 font-bold"
+                          className="w-8 h-8 flex items-center justify-center bg-collage-ink text-white rounded-lg hover:bg-collage-pink transition-colors font-bold text-lg border-2 border-collage-ink shadow-[2px_2px_0_0_var(--color-collage-ink)]"
                         >
                           -
                         </button>
-                        <span className="font-semibold text-sm w-4 text-center">{item.quantity}</span>
+                        <span className="font-display font-bold text-lg w-6 text-center text-collage-ink">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm hover:bg-gray-100 font-bold"
+                          className="w-8 h-8 flex items-center justify-center bg-collage-ink text-white rounded-lg hover:bg-collage-pink transition-colors font-bold text-lg border-2 border-collage-ink shadow-[2px_2px_0_0_var(--color-collage-ink)]"
                         >
                           +
                         </button>

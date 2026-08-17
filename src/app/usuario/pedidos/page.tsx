@@ -21,8 +21,8 @@ export default function UsuarioPedidos() {
         <p className="text-gray-500 mb-8 leading-relaxed max-w-sm mx-auto">
           Aún no tienes pedidos registrados.
         </p>
-        
-        <Link 
+
+        <Link
           href="/"
           className="inline-flex justify-center items-center px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-sm transition-all hover:bg-gray-800"
         >

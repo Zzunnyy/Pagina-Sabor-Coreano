@@ -78,13 +78,13 @@ export default function UsuarioLayout({ children }: { children: React.ReactNode 
               </p>
             </div>
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={() => setShowLogoutModal(false)}
                 className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
               >
                 Cancelar
               </button>
-              <Link 
+              <Link
                 href="/"
                 className="flex-1 px-4 py-3 bg-red-600 text-white font-semibold rounded-xl shadow-sm hover:bg-red-700 transition-colors flex justify-center items-center"
               >

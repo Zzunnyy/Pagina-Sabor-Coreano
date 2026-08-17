@@ -34,7 +34,7 @@ export default function UsuarioPerfil() {
 
       {/* Actions */}
       <div className="mt-10 pt-8 border-t border-gray-100">
-        <button 
+        <button
           className="px-8 py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-sm transition-all hover:bg-gray-800 cursor-default"
           onClick={(e) => e.preventDefault()}
         >
