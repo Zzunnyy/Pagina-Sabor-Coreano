@@ -1,0 +1,13 @@
+# Monorepo root — evita que basura de build/dependencias quede committeada
+# por accidente. Cada sub-proyecto (Pagina-Sabor-Coreano/, sabor-coreano-backend/)
+# tiene su propio .gitignore para lo específico de su stack.
+
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+tsconfig.tsbuildinfo
+next-env.d.ts
