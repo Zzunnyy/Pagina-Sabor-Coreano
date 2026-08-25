@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin Sabor Coreano',
             'email' => 'admin@saborcoreano.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'rol' => 'admin',
         ]);
 
         // 2. Crear Usuario Normal
@@ -27,6 +28,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Cliente Feliz',
             'email' => 'cliente@ejemplo.com',
             'password' => \Illuminate\Support\Facades\Hash::make('secreto123'),
+            'rol' => 'cliente',
         ]);
 
         // 3. Crear Categoría

@@ -1,11 +1,18 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::post('/login', [AuthController::class, 'login']);
 
-use App\Http\Controllers\Api\ProductController;
 Route::get('/productos', [ProductController::class, 'index']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::patch('/productos/{product}', [ProductController::class, 'update']);
+    });
+});
