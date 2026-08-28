@@ -4,6 +4,12 @@
     {
       "name": "backend",
       "url": "http://localhost"
+    },
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
     }
   ]
 }

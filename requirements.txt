@@ -1,0 +1,26 @@
+# Requisitos del proyecto - Sabor Coreano
+# Este no es un proyecto Python; este archivo es solo una checklist de referencia.
+
+## Software requerido
+- Node.js >= 20 (recomendado v24, que es la versión con la que se desarrolló)
+- npm >= 10
+- PostgreSQL (local o remoto) para la base de datos de Prisma
+
+## Extensiones de VS Code recomendadas
+Al abrir el proyecto en VS Code debería aparecer un aviso para instalarlas
+automáticamente (definidas en .vscode/extensions.json). Si no aparece, se
+pueden instalar a mano con estos comandos:
+
+code --install-extension bradlc.vscode-tailwindcss
+code --install-extension Prisma.prisma
+code --install-extension dbaeumer.vscode-eslint
+
+## Pasos de instalación
+1. Clonar el repositorio
+2. npm install
+3. cp .env.example .env
+   (ajustar DATABASE_URL si tu Postgres local usa otro usuario/puerto)
+4. npx prisma generate
+5. npx prisma migrate dev
+6. npx tsx prisma/seed.ts        (opcional, carga datos de prueba)
+7. npm run dev                  (levanta el servidor en http://localhost:3000)
