@@ -1,6 +1,12 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function UsuarioPerfil() {
+  const { user } = useAuth();
+
+  if (!user) return null;
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 md:p-10">
       <div className="mb-8">
@@ -16,19 +22,19 @@ export default function UsuarioPerfil() {
         {/* Nombre */}
         <div className="p-5 bg-gray-50 border border-gray-100 rounded-xl">
           <p className="font-medium text-sm text-gray-500 mb-1">Nombre Completo</p>
-          <p className="font-semibold text-lg text-gray-900">Usuario de Prueba</p>
+          <p className="font-semibold text-lg text-gray-900">{user.name}</p>
         </div>
 
         {/* Email */}
         <div className="p-5 bg-gray-50 border border-gray-100 rounded-xl">
           <p className="font-medium text-sm text-gray-500 mb-1">Correo Electrónico</p>
-          <p className="font-semibold text-lg text-gray-900">usuario@ejemplo.com</p>
+          <p className="font-semibold text-lg text-gray-900">{user.email}</p>
         </div>
 
         {/* Teléfono */}
         <div className="p-5 bg-gray-50 border border-gray-100 rounded-xl">
           <p className="font-medium text-sm text-gray-500 mb-1">Número de Teléfono</p>
-          <p className="font-semibold text-lg text-gray-900">+56 9 1234 5678</p>
+          <p className="font-semibold text-lg text-gray-900">{user.telefono ?? "No registrado"}</p>
         </div>
       </div>
 

@@ -1,11 +1,24 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function UsuarioLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isHydrated, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  useEffect(() => {
+    if (isHydrated && !user) {
+      router.push("/login");
+    }
+  }, [isHydrated, user, router]);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -16,10 +29,10 @@ export default function UsuarioLayout({ children }: { children: React.ReactNode 
           <aside className="w-full md:w-72 flex flex-col gap-6">
             <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col gap-2">
               <div className="flex flex-col items-center mb-4">
-                <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center text-4xl mb-3 border border-gray-200 shadow-sm">
-                  F
+                <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center text-4xl mb-3 border border-gray-200 shadow-sm text-white">
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
-                <h2 className="font-bold text-lg text-gray-900 mb-4">Usuario de Prueba</h2>
+                <h2 className="font-bold text-lg text-gray-900 mb-4">{user.name}</h2>
                 <div className="h-px w-full bg-gray-200"></div>
               </div>
               <Link
@@ -84,12 +97,15 @@ export default function UsuarioLayout({ children }: { children: React.ReactNode 
               >
                 Cancelar
               </button>
-              <Link
-                href="/"
+              <button
+                onClick={() => {
+                  logout();
+                  router.push("/");
+                }}
                 className="flex-1 px-4 py-3 bg-red-600 text-white font-semibold rounded-xl shadow-sm hover:bg-red-700 transition-colors flex justify-center items-center"
               >
                 Sí, cerrar
-              </Link>
+              </button>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CollageSticker from "@/components/CollageSticker";
 import { useState } from "react";
+import { useAuth, ApiError } from "@/context/AuthContext";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -15,12 +16,14 @@ interface RegistroErrors {
 
 export default function Registro() {
   const router = useRouter();
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<RegistroErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: RegistroErrors = {};
@@ -37,8 +40,17 @@ export default function Registro() {
     }
 
     setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
+    if (Object.keys(newErrors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await register(name, email, password);
       router.push("/usuario");
+    } catch (err) {
+      const mensaje = err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.";
+      setErrors({ email: mensaje });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -149,9 +161,10 @@ export default function Registro() {
 
               <button
                 type="submit"
-                className="block text-center w-full py-4 mt-6 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
+                disabled={isSubmitting}
+                className="block text-center w-full py-4 mt-6 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg disabled:opacity-60 disabled:pointer-events-none"
               >
-                Registrarme
+                {isSubmitting ? "Creando cuenta..." : "Registrarme"}
               </button>
             </form>
 

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CollageSticker from "@/components/CollageSticker";
 import { useState } from "react";
+import { useAuth, ApiError } from "@/context/AuthContext";
+import { enviarCodigoRecuperacion, verificarCodigoRecuperacion, resetearPassword } from "@/lib/api";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,6 +15,7 @@ interface LoginErrors {
 }
 
 interface ForgotErrors {
+  email?: string;
   code?: string;
 }
 
@@ -23,12 +26,14 @@ interface ResetErrors {
 
 export default function Login() {
   const router = useRouter();
+  const { login } = useAuth();
   const [view, setView] = useState<"login" | "forgot" | "reset">("login");
   const [passwordChanged, setPasswordChanged] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginErrors, setLoginErrors] = useState<LoginErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [code, setCode] = useState("");
   const [forgotErrors, setForgotErrors] = useState<ForgotErrors>({});
@@ -37,7 +42,7 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetErrors, setResetErrors] = useState<ResetErrors>({});
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: LoginErrors = {};
@@ -51,12 +56,39 @@ export default function Login() {
     }
 
     setLoginErrors(errors);
-    if (Object.keys(errors).length === 0) {
+    if (Object.keys(errors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
       router.push("/usuario");
+    } catch (err) {
+      const mensaje = err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.";
+      setLoginErrors({ email: mensaje });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleEnviarCodigo = async () => {
+    if (!email.trim() || !EMAIL_REGEX.test(email)) {
+      setLoginErrors({ email: "Ingresa tu correo electrónico para recuperar tu contraseña." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await enviarCodigoRecuperacion(email);
+      setView("forgot");
+    } catch (err) {
+      const mensaje = err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.";
+      setLoginErrors({ email: mensaje });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: ForgotErrors = {};
@@ -65,12 +97,21 @@ export default function Login() {
     }
 
     setForgotErrors(errors);
-    if (Object.keys(errors).length === 0) {
+    if (Object.keys(errors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await verificarCodigoRecuperacion(email, code);
       setView("reset");
+    } catch (err) {
+      const mensaje = err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.";
+      setForgotErrors({ code: mensaje });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleResetSubmit = (e: React.FormEvent) => {
+  const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: ResetErrors = {};
@@ -82,7 +123,11 @@ export default function Login() {
     }
 
     setResetErrors(errors);
-    if (Object.keys(errors).length === 0) {
+    if (Object.keys(errors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await resetearPassword(email, code, newPassword);
       setView("login");
       setPasswordChanged(true);
       setPassword("");
@@ -91,6 +136,11 @@ export default function Login() {
       setConfirmPassword("");
       setForgotErrors({});
       setResetErrors({});
+    } catch (err) {
+      const mensaje = err instanceof ApiError ? err.message : "No se pudo conectar con el servidor.";
+      setResetErrors({ confirmPassword: mensaje });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -168,7 +218,7 @@ export default function Login() {
                     <label className="block font-display font-semibold text-sm text-collage-ink">
                       Contraseña
                     </label>
-                    <button type="button" onClick={() => { setView("forgot"); setPasswordChanged(false); }} className="text-sm font-semibold text-collage-indigo hover:text-collage-pink transition-colors">
+                    <button type="button" disabled={isSubmitting} onClick={() => { setPasswordChanged(false); handleEnviarCodigo(); }} className="text-sm font-semibold text-collage-indigo hover:text-collage-pink transition-colors disabled:opacity-60">
                       ¿Olvidaste tu contraseña?
                     </button>
                   </div>
@@ -192,9 +242,10 @@ export default function Login() {
 
                 <button
                   type="submit"
-                  className="block text-center w-full py-4 mt-4 bg-collage-indigo hover:bg-collage-pink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
+                  disabled={isSubmitting}
+                  className="block text-center w-full py-4 mt-4 bg-collage-indigo hover:bg-collage-pink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  Ingresar
+                  {isSubmitting ? "Ingresando..." : "Ingresar"}
                 </button>
               </form>
             )}
@@ -203,7 +254,7 @@ export default function Login() {
               <form className="space-y-5" onSubmit={handleForgotSubmit} noValidate>
                 <div className="p-4 bg-collage-lime/20 border-2 border-collage-lime border-dashed rounded-xl mb-4 text-center">
                   <p className="text-collage-ink font-medium text-sm">
-                    Hemos enviado un código a tu correo electrónico. Ingrésalo abajo para restablecer tu contraseña.
+                    Si <strong>{email}</strong> está registrado, te enviamos un código. Ingrésalo abajo para restablecer tu contraseña.
                   </p>
                 </div>
                 <div>
@@ -231,9 +282,18 @@ export default function Login() {
 
                 <button
                   type="submit"
-                  className="block text-center w-full py-4 mt-4 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
+                  disabled={isSubmitting}
+                  className="block text-center w-full py-4 mt-4 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  Verificar código de seguridad
+                  {isSubmitting ? "Verificando..." : "Verificar código de seguridad"}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleEnviarCodigo}
+                  className="block text-center w-full text-sm font-semibold text-collage-indigo hover:text-collage-pink transition-colors disabled:opacity-60"
+                >
+                  Reenviar código
                 </button>
               </form>
             )}
@@ -285,9 +345,10 @@ export default function Login() {
 
                 <button
                   type="submit"
-                  className="block text-center w-full py-4 mt-4 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
+                  disabled={isSubmitting}
+                  className="block text-center w-full py-4 mt-4 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  Cambiar Contraseña
+                  {isSubmitting ? "Cambiando..." : "Cambiar Contraseña"}
                 </button>
               </form>
             )}

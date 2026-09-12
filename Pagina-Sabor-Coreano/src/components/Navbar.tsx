@@ -1,9 +1,11 @@
 "use client";
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur-sm shadow-sm transition-colors border-b bg-white border-gray-200">
@@ -35,10 +37,10 @@ export default function Navbar() {
             Contáctanos
           </a>
           <Link
-            href="/login"
+            href={user ? "/usuario" : "/login"}
             className="px-6 py-2.5 bg-collage-indigo hover:bg-collage-pink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
           >
-            Iniciar Sesión
+            {user ? `Hola, ${user.name.split(" ")[0]}` : "Iniciar Sesión"}
           </Link>
         </div>
 
@@ -89,11 +91,11 @@ export default function Navbar() {
                 Contáctanos
               </a>
               <Link
-                href="/login"
+                href={user ? "/usuario" : "/login"}
                 onClick={() => setIsOpen(false)}
                 className="w-full text-center text-white px-6 py-3 rounded-xl font-semibold transition-all bg-red-600 hover:bg-red-700 active:scale-95"
               >
-                Iniciar Sesión
+                {user ? `Hola, ${user.name.split(" ")[0]}` : "Iniciar Sesión"}
               </Link>
             </div>
           </div>

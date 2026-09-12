@@ -14,6 +14,9 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const ROL_ADMIN = 'admin';
+    public const ROL_CLIENTE = 'cliente';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -31,7 +34,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->rol === 'admin';
+        return $this->rol === self::ROL_ADMIN;
     }
 
     /**
