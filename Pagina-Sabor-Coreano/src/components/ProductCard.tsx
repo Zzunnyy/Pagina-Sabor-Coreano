@@ -4,6 +4,7 @@ import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
 import { useCart } from "@/context/CartContext";
 import { getProductVisual } from "@/lib/productVisuals";
+import { formatPrice } from "@/lib/currency";
 
 interface ProductCardProps {
   product: {
@@ -78,7 +79,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="flex items-center justify-between pt-3">
             <div className="pointer-events-auto">
               <CollageSticker bg="bg-collage-lime" rotate={-4}>
-                ${product.price.toFixed(2)}
+                {formatPrice(product.price)}
               </CollageSticker>
             </div>
             <button
@@ -163,7 +164,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-collage-ink/50 uppercase tracking-widest mb-1">Precio</span>
                   <span className="font-display font-bold text-4xl text-collage-ink">
-                    ${product.price.toFixed(2)}
+                    {formatPrice(product.price)}
                   </span>
                 </div>
                 

@@ -8,6 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/context/CartContext";
 import { PRODUCTS } from "@/data/products";
 import { getProductVisual } from "@/lib/productVisuals";
+import { formatPrice } from "@/lib/currency";
 
 export default function ProductoDetalle() {
   const params = useParams<{ id: string }>();
@@ -107,7 +108,7 @@ export default function ProductoDetalle() {
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-collage-ink/50 uppercase tracking-widest mb-1">Precio</span>
                   <span className="font-display font-bold text-4xl text-collage-ink">
-                    ${product.price.toFixed(2)}
+                    {formatPrice(product.price)}
                   </span>
                 </div>
 
