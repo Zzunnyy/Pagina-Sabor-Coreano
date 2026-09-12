@@ -5,6 +5,7 @@ import Link from "next/link";
 import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
 import ProductCard from "@/components/ProductCard";
+import { CATEGORIES, PRODUCTS } from "@/data/products";
 
 interface Slide {
   badges: { label: string; bg: string; text?: string; rotate: number }[];
@@ -49,41 +50,6 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const CATEGORIES = [
-  { slug: "todos", label: "Todos" },
-  { slug: "fermentados", label: "Fermentados" },
-  { slug: "instantaneos", label: "Instantáneos" },
-  { slug: "snacks", label: "Snacks" },
-];
-
-const MOCK_PRODUCTS = [
-  {
-    id: "1",
-    name: "Kimchi Tradicional",
-    description: "Kimchi casero fermentado, picante y crujiente.",
-    price: 15.99,
-    imageUrl: "/Imagenes/kimchi.webp",
-    category: "fermentados",
-    isNew: true,
-  },
-  {
-    id: "2",
-    name: "Tteokbokki Picante",
-    description: "Pasteles de arroz masticables en salsa dulce y picante.",
-    price: 12.50,
-    imageUrl: "/Imagenes/tteok.jpg",
-    category: "snacks",
-  },
-  {
-    id: "3",
-    name: "Ramen Coreano (5 pack)",
-    description: "Paquete de fideos instantáneos picantes.",
-    price: 8.99,
-    imageUrl: "/Imagenes/Ramen.jpg",
-    category: "instantaneos",
-  },
-];
-
 export default function Home() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,7 +64,7 @@ export default function Home() {
 
   const slide = SLIDES[activeSlide];
 
-  const filteredProducts = MOCK_PRODUCTS.filter((product) => {
+  const filteredProducts = PRODUCTS.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "todos" || product.category === activeCategory;
@@ -278,7 +244,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 md:gap-10">
-                {filteredProducts.map((product: any) => (
+                {filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>

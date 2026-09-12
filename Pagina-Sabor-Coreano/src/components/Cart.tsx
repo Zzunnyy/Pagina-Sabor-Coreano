@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import Image from "next/image";
+import { getProductVisual } from "@/lib/productVisuals";
 
 export default function Cart() {
   const {
@@ -75,7 +76,9 @@ export default function Cart() {
             </div>
           ) : (
             <div className="relative z-10 flex flex-col gap-4">
-              {items.map((item) => (
+              {items.map((item) => {
+                const { emoji } = getProductVisual(item.id, item.name);
+                return (
                 <div
                   key={item.id}
                   className="flex gap-4 p-4 bg-white rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]"
@@ -84,7 +87,7 @@ export default function Cart() {
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
-                      "🍜"
+                      emoji
                     )}
                   </div>
                   <div className="flex flex-col flex-1 justify-between">
@@ -129,7 +132,8 @@ export default function Cart() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -142,12 +146,22 @@ export default function Cart() {
               ${cartTotal.toFixed(2)}
             </span>
           </div>
-          <button
-            disabled={items.length === 0}
-            className="w-full py-4 bg-collage-orange text-white font-display font-semibold text-xl rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] disabled:opacity-50 disabled:pointer-events-none"
-          >
-            Ir a Pagar
-          </button>
+          {items.length === 0 ? (
+            <button
+              disabled
+              className="w-full py-4 bg-collage-orange text-white font-display font-semibold text-xl rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] opacity-50 pointer-events-none"
+            >
+              Ir a Pagar
+            </button>
+          ) : (
+            <Link
+              href="/checkout"
+              onClick={toggleCart}
+              className="block text-center w-full py-4 bg-collage-orange text-white font-display font-semibold text-xl rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all hover:-translate-y-1 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
+            >
+              Ir a Pagar
+            </Link>
+          )}
         </div>
       </div>
     </>

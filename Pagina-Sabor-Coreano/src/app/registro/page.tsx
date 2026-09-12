@@ -1,9 +1,47 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CollageSticker from "@/components/CollageSticker";
+import { useState } from "react";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+interface RegistroErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+}
 
 export default function Registro() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<RegistroErrors>({});
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newErrors: RegistroErrors = {};
+    if (!name.trim()) {
+      newErrors.name = "Ingresa tu nombre completo.";
+    }
+    if (!email.trim()) {
+      newErrors.email = "Ingresa tu correo electrónico.";
+    } else if (!EMAIL_REGEX.test(email)) {
+      newErrors.email = "Ingresa un correo electrónico válido.";
+    }
+    if (password.length < 8) {
+      newErrors.password = "La contraseña debe tener al menos 8 caracteres.";
+    }
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length === 0) {
+      router.push("/usuario");
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-collage-cream relative overflow-hidden">
       {/* Background decorations */}
@@ -39,8 +77,8 @@ export default function Registro() {
               </p>
             </div>
 
-            {/* Formulario (Visual) */}
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            {/* Formulario */}
+            <form className="space-y-4" onSubmit={handleSubmit} noValidate>
               <div>
                 <label className="block font-display font-semibold text-sm text-collage-ink mb-2">
                   Nombre Completo
@@ -48,8 +86,19 @@ export default function Registro() {
                 <input
                   type="text"
                   placeholder="Tu nombre"
-                  className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                  }}
+                  className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${errors.name
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                    }`}
                 />
+                {errors.name && (
+                  <p className="mt-1.5 text-sm font-medium text-red-500">{errors.name}</p>
+                )}
               </div>
 
               <div>
@@ -59,8 +108,19 @@ export default function Registro() {
                 <input
                   type="email"
                   placeholder="tu@email.com"
-                  className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
+                  className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${errors.email
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                    }`}
                 />
+                {errors.email && (
+                  <p className="mt-1.5 text-sm font-medium text-red-500">{errors.email}</p>
+                )}
               </div>
 
               <div>
@@ -70,16 +130,29 @@ export default function Registro() {
                 <input
                   type="password"
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
+                  className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${errors.password
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                    }`}
                 />
+                {errors.password ? (
+                  <p className="mt-1.5 text-sm font-medium text-red-500">{errors.password}</p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-collage-ink/50">Mínimo 8 caracteres.</p>
+                )}
               </div>
 
-              <Link
-                href="/usuario"
+              <button
+                type="submit"
                 className="block text-center w-full py-4 mt-6 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
               >
                 Registrarme
-              </Link>
+              </button>
             </form>
 
             <div className="mt-8 pt-6 border-t-[3px] border-collage-ink border-dashed text-center">

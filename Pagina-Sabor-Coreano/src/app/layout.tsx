@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Fredoka, Caveat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { ThemeProvider } from "@/context/ThemeContext";
 import { CartProvider } from "@/context/CartContext";
 import Cart from "@/components/Cart";
 
@@ -45,14 +44,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
-          <CartProvider>
-            <Navbar />
-            {children}
-            <Cart />
-            <Footer />
-          </CartProvider>
-        </ThemeProvider>
+        <CartProvider>
+          <Navbar />
+          {children}
+          <Cart />
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );

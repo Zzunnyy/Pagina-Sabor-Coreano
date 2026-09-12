@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 interface CollageFrameProps {
   emoji?: string;
   imageUrl?: string;
+  imageAlt?: string;
   bg: string;
   rotate?: number;
   badge?: ReactNode;
@@ -20,6 +21,7 @@ const badgePositions: Record<string, string> = {
 export default function CollageFrame({
   emoji,
   imageUrl,
+  imageAlt = "Frame image",
   bg,
   rotate = 0,
   badge,
@@ -38,7 +40,7 @@ export default function CollageFrame({
         <div className="absolute inset-0 text-collage-ink/10 halftone-dots" />
         <div className="w-full h-full flex items-center justify-center text-6xl md:text-7xl drop-shadow-sm">
           {imageUrl ? (
-            <img src={imageUrl} alt="Frame image" className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={imageAlt} className="w-full h-full object-cover" />
           ) : (
             emoji
           )}

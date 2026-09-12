@@ -1,7 +1,9 @@
 import { useState } from "react";
+import Link from "next/link";
 import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
 import { useCart } from "@/context/CartContext";
+import { getProductVisual } from "@/lib/productVisuals";
 
 interface ProductCardProps {
   product: {
@@ -15,39 +17,11 @@ interface ProductCardProps {
   };
 }
 
-const PALETTE = ["bg-collage-orange", "bg-collage-pink", "bg-collage-lime", "bg-collage-indigo"];
-const DEFAULT_EMOJI = ["🍜", "🥢", "🍚", "🌶️", "🥟", "🍢"];
-
-const EMOJI_BY_KEYWORD: [string, string][] = [
-  ["kimchi", "🥬"],
-  ["tteok", "🍢"],
-  ["ramen", "🍜"],
-  ["fideo", "🍜"],
-  ["soju", "🍶"],
-  ["pollo", "🍗"],
-  ["arroz", "🍚"],
-  ["mandu", "🥟"],
-  ["bibimbap", "🍲"],
-];
-
-function pickFromId(id: string, options: string[]) {
-  const code = id.split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  return options[code % options.length];
-}
-
-function pickEmoji(id: string, name: string) {
-  const lowerName = name.toLowerCase();
-  const match = EMOJI_BY_KEYWORD.find(([keyword]) => lowerName.includes(keyword));
-  return match ? match[1] : pickFromId(id, DEFAULT_EMOJI);
-}
-
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart, toggleCart } = useCart();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const bg = pickFromId(product.id, PALETTE);
-  const emoji = pickEmoji(product.id, product.name);
-  const rotate = (product.id.charCodeAt(0) % 5) - 2;
+  const { bg, emoji, rotate } = getProductVisual(product.id, product.name);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -71,6 +45,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="block mb-5">
           <CollageFrame
             imageUrl={product.imageUrl || undefined}
+            imageAlt={product.name}
             emoji={emoji}
             bg={bg}
             rotate={rotate}
@@ -91,6 +66,14 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-sm text-collage-ink/70 mb-4 line-clamp-2 flex-1">
             {product.description}
           </p>
+
+          <Link
+            href={`/productos/${product.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="w-max text-sm font-display font-semibold text-collage-indigo hover:text-collage-pink transition-colors underline underline-offset-2 pointer-events-auto mb-3"
+          >
+            Ver detalle →
+          </Link>
 
           <div className="flex items-center justify-between pt-3">
             <div className="pointer-events-auto">
@@ -138,6 +121,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               <div className="w-full max-w-sm relative z-10">
                 <CollageFrame
                   imageUrl={product.imageUrl || undefined}
+                  imageAlt={product.name}
                   emoji={emoji}
                   bg={bg}
                   rotate={rotate}
@@ -166,6 +150,13 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <p className="text-lg text-collage-ink/80 leading-relaxed font-medium">
                   {product.description}
                 </p>
+
+                <Link
+                  href={`/productos/${product.id}`}
+                  className="w-max text-sm font-display font-semibold text-collage-indigo hover:text-collage-pink transition-colors underline underline-offset-2"
+                >
+                  Ver página completa →
+                </Link>
               </div>
 
               <div className="mt-8 pt-6 border-t-[3px] border-dashed border-collage-ink/20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">

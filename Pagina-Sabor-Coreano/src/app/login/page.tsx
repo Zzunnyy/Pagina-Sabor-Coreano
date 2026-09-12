@@ -1,16 +1,97 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CollageSticker from "@/components/CollageSticker";
 import { useState } from "react";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+interface LoginErrors {
+  email?: string;
+  password?: string;
+}
+
+interface ForgotErrors {
+  code?: string;
+}
+
+interface ResetErrors {
+  newPassword?: string;
+  confirmPassword?: string;
+}
+
 export default function Login() {
+  const router = useRouter();
   const [view, setView] = useState<"login" | "forgot" | "reset">("login");
   const [passwordChanged, setPasswordChanged] = useState(false);
 
-  const handlePasswordChange = () => {
-    setView("login");
-    setPasswordChanged(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginErrors, setLoginErrors] = useState<LoginErrors>({});
+
+  const [code, setCode] = useState("");
+  const [forgotErrors, setForgotErrors] = useState<ForgotErrors>({});
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetErrors, setResetErrors] = useState<ResetErrors>({});
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const errors: LoginErrors = {};
+    if (!email.trim()) {
+      errors.email = "Ingresa tu correo electrónico.";
+    } else if (!EMAIL_REGEX.test(email)) {
+      errors.email = "Ingresa un correo electrónico válido.";
+    }
+    if (!password) {
+      errors.password = "Ingresa tu contraseña.";
+    }
+
+    setLoginErrors(errors);
+    if (Object.keys(errors).length === 0) {
+      router.push("/usuario");
+    }
+  };
+
+  const handleForgotSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const errors: ForgotErrors = {};
+    if (!/^\d{6}$/.test(code)) {
+      errors.code = "Ingresa el código de 6 dígitos que enviamos a tu correo.";
+    }
+
+    setForgotErrors(errors);
+    if (Object.keys(errors).length === 0) {
+      setView("reset");
+    }
+  };
+
+  const handleResetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const errors: ResetErrors = {};
+    if (newPassword.length < 8) {
+      errors.newPassword = "La contraseña debe tener al menos 8 caracteres.";
+    }
+    if (confirmPassword !== newPassword) {
+      errors.confirmPassword = "Las contraseñas no coinciden.";
+    }
+
+    setResetErrors(errors);
+    if (Object.keys(errors).length === 0) {
+      setView("login");
+      setPasswordChanged(true);
+      setPassword("");
+      setCode("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setForgotErrors({});
+      setResetErrors({});
+    }
   };
 
   return (
@@ -57,9 +138,9 @@ export default function Login() {
               </div>
             )}
 
-            {/* Formulario (Visual) */}
+            {/* Formulario de Login */}
             {view === "login" && (
-              <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+              <form className="space-y-5" onSubmit={handleLoginSubmit} noValidate>
                 <div>
                   <label className="block font-display font-semibold text-sm text-collage-ink mb-2">
                     Correo Electrónico
@@ -67,8 +148,19 @@ export default function Login() {
                   <input
                     type="email"
                     placeholder="tu@email.com"
-                    className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (loginErrors.email) setLoginErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${loginErrors.email
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                      }`}
                   />
+                  {loginErrors.email && (
+                    <p className="mt-1.5 text-sm font-medium text-red-500">{loginErrors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -83,21 +175,32 @@ export default function Login() {
                   <input
                     type="password"
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (loginErrors.password) setLoginErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
+                    className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${loginErrors.password
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                      }`}
                   />
+                  {loginErrors.password && (
+                    <p className="mt-1.5 text-sm font-medium text-red-500">{loginErrors.password}</p>
+                  )}
                 </div>
 
-                <Link
-                  href="/usuario"
+                <button
+                  type="submit"
                   className="block text-center w-full py-4 mt-4 bg-collage-indigo hover:bg-collage-pink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
                 >
                   Ingresar
-                </Link>
+                </button>
               </form>
             )}
 
             {view === "forgot" && (
-              <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+              <form className="space-y-5" onSubmit={handleForgotSubmit} noValidate>
                 <div className="p-4 bg-collage-lime/20 border-2 border-collage-lime border-dashed rounded-xl mb-4 text-center">
                   <p className="text-collage-ink font-medium text-sm">
                     Hemos enviado un código a tu correo electrónico. Ingrésalo abajo para restablecer tu contraseña.
@@ -109,14 +212,25 @@ export default function Login() {
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
                     placeholder="Ej: 123456"
-                    className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40 text-center tracking-widest text-lg"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value);
+                      if (forgotErrors.code) setForgotErrors({});
+                    }}
+                    className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 text-center tracking-widest text-lg ${forgotErrors.code
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                      }`}
                   />
+                  {forgotErrors.code && (
+                    <p className="mt-1.5 text-sm font-medium text-red-500 text-center">{forgotErrors.code}</p>
+                  )}
                 </div>
 
                 <button
-                  type="button"
-                  onClick={() => setView("reset")}
+                  type="submit"
                   className="block text-center w-full py-4 mt-4 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
                 >
                   Verificar código de seguridad
@@ -125,7 +239,7 @@ export default function Login() {
             )}
 
             {view === "reset" && (
-              <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+              <form className="space-y-5" onSubmit={handleResetSubmit} noValidate>
                 <div>
                   <label className="block font-display font-semibold text-sm text-collage-ink mb-2">
                     Nueva Contraseña
@@ -133,8 +247,19 @@ export default function Login() {
                   <input
                     type="password"
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      if (resetErrors.newPassword) setResetErrors((prev) => ({ ...prev, newPassword: undefined }));
+                    }}
+                    className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${resetErrors.newPassword
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                      }`}
                   />
+                  {resetErrors.newPassword && (
+                    <p className="mt-1.5 text-sm font-medium text-red-500">{resetErrors.newPassword}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-display font-semibold text-sm text-collage-ink mb-2">
@@ -143,13 +268,23 @@ export default function Login() {
                   <input
                     type="password"
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-collage-cream border-[3px] border-collage-ink rounded-xl focus:outline-none focus:border-collage-indigo focus:ring-2 focus:ring-collage-indigo/20 transition-all font-medium text-collage-ink placeholder-collage-ink/40"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (resetErrors.confirmPassword) setResetErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                    }}
+                    className={`w-full px-4 py-3 bg-collage-cream border-[3px] rounded-xl focus:outline-none focus:ring-2 transition-all font-medium text-collage-ink placeholder-collage-ink/40 ${resetErrors.confirmPassword
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-collage-ink focus:border-collage-indigo focus:ring-collage-indigo/20"
+                      }`}
                   />
+                  {resetErrors.confirmPassword && (
+                    <p className="mt-1.5 text-sm font-medium text-red-500">{resetErrors.confirmPassword}</p>
+                  )}
                 </div>
 
                 <button
-                  type="button"
-                  onClick={handlePasswordChange}
+                  type="submit"
                   className="block text-center w-full py-4 mt-4 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] text-lg"
                 >
                   Cambiar Contraseña
