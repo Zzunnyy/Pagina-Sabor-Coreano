@@ -12,10 +12,10 @@ interface CollageFrameProps {
 }
 
 const badgePositions: Record<string, string> = {
-  "top-left": "-top-4 -left-4",
-  "top-right": "-top-4 -right-4",
-  "bottom-left": "-bottom-4 -left-4",
-  "bottom-right": "-bottom-4 -right-4",
+  "top-left": "top-3 left-3",
+  "top-right": "top-3 right-3",
+  "bottom-left": "bottom-3 left-3",
+  "bottom-right": "bottom-3 right-3",
 };
 
 export default function CollageFrame({
@@ -34,15 +34,15 @@ export default function CollageFrame({
       style={{ transform: `rotate(${rotate}deg)` }}
     >
       <div
-        className={`relative w-full h-full ${bg} rounded-[2.5rem] border-[6px] border-white shadow-[6px_8px_0_0_rgba(24,20,44,0.25)] overflow-hidden transition-transform duration-300 group-hover:rotate-0 group-hover:scale-[1.03]`}
-        style={{ transform: `rotate(${-rotate}deg) scale(1.15)` }}
+        className={`relative w-full h-full ${bg} rounded-[2.5rem] border-[6px] border-collage-ink shadow-[6px_8px_0_0_rgba(24,20,44,0.25)] overflow-hidden transition-transform duration-300 group-hover:rotate-0 group-hover:scale-[1.03]`}
+        style={{ transform: `rotate(${-rotate}deg)` }}
       >
         <div className="absolute inset-0 text-collage-ink/10 halftone-dots" />
-        <div className="w-full h-full flex items-center justify-center text-6xl md:text-7xl drop-shadow-sm">
+        <div className="w-full h-full flex items-center justify-center text-6xl md:text-7xl">
           {imageUrl ? (
-            <img src={imageUrl} alt={imageAlt} className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={imageAlt} className="w-full h-full object-cover rounded-[2rem]" />
           ) : (
-            emoji
+            <span className="drop-shadow-sm">{emoji}</span>
           )}
         </div>
       </div>

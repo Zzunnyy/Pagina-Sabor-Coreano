@@ -16,7 +16,7 @@ interface Slide {
   ctaSecondary?: { label: string; href: string };
   visual:
   | { type: "grid" }
-  | { type: "single"; emoji: string; bg: string; badgeLabel: string; badgeBg: string };
+  | { type: "single"; imageUrl: string; imageAlt: string; bg: string; badgeLabel: string; badgeBg: string };
 }
 
 const SLIDES: Slide[] = [
@@ -33,20 +33,34 @@ const SLIDES: Slide[] = [
     visual: { type: "grid" },
   },
   {
-    badges: [{ label: "🍶 Promo por tiempo limitado", bg: "bg-collage-indigo", text: "text-white", rotate: -4 }],
-    title: "2x1 en Soju",
-    script: "dare or drink",
-    desc: "Lleva dos botellas de soju al precio de una. Ideal para compartir con amigos.",
-    cta: { label: "Ver Bebidas", href: "/productos" },
-    visual: { type: "single", emoji: "🍶", bg: "bg-collage-pink", badgeLabel: "2x1", badgeBg: "bg-collage-lime" },
+    badges: [{ label: "🔥 Los favoritos", bg: "bg-collage-indigo", text: "text-white", rotate: -4 }],
+    title: "Buldak Ramen",
+    script: "el picante que todos aman",
+    desc: "Fideos coreanos Buldak en Rosé, Carbonara, 4 Quesos y Queso. Elige tu nivel de picante favorito.",
+    cta: { label: "Ver Ramyeon", href: "/productos" },
+    visual: {
+      type: "single",
+      imageUrl: "/productos/ramen-buldak-carbonara.jpg",
+      imageAlt: "Ramen Buldak Carbonara",
+      bg: "bg-collage-pink",
+      badgeLabel: "🔥 Picante",
+      badgeBg: "bg-collage-lime",
+    },
   },
   {
     badges: [{ label: "신선 · Recién llegado", bg: "bg-collage-orange", text: "text-white", rotate: 4 }],
-    title: "Kimchi Casero",
-    script: "picante y crujiente",
-    desc: "Nuestro kimchi tradicional, fermentado en casa con la receta de siempre.",
+    title: "Choco Pie",
+    script: "dulce, suave y con marshmallow",
+    desc: "Bizcocho relleno de marshmallow cubierto en chocolate. Disponible individual o en caja de 12.",
     cta: { label: "Probar Ahora", href: "/productos" },
-    visual: { type: "single", emoji: "🥬", bg: "bg-collage-indigo", badgeLabel: "🆕 Nuevo", badgeBg: "bg-collage-pink" },
+    visual: {
+      type: "single",
+      imageUrl: "/productos/choco-pie.jpg",
+      imageAlt: "Choco Pie",
+      bg: "bg-collage-indigo",
+      badgeLabel: "🆕 Nuevo",
+      badgeBg: "bg-collage-pink",
+    },
   },
 ];
 
@@ -153,28 +167,43 @@ export default function Home() {
                 {slide.visual.type === "grid" ? (
                   <div className="relative grid grid-cols-2 gap-5 md:gap-6 px-4">
                     <CollageFrame
-                      imageUrl="/productos/sushi.jpg"
+                      imageUrl="/productos/ramen-buldak-carbonara.jpg"
+                      imageAlt="Ramen Buldak Carbonara"
                       bg="bg-collage-orange"
                       rotate={-6}
                       className="col-span-1 mt-6"
                       badge={<CollageSticker bg="bg-collage-cream" rotate={-10}>🔥 Picante</CollageSticker>}
                       badgePosition="top-left"
                     />
-                    <CollageFrame emoji="🍗" bg="bg-collage-indigo" rotate={5} className="col-span-1" />
                     <CollageFrame
-                      emoji="🍶"
+                      imageUrl="/productos/jugo-mango.jpg"
+                      imageAlt="Jugo Coco Palm Mango"
+                      bg="bg-collage-indigo"
+                      rotate={5}
+                      className="col-span-1"
+                    />
+                    <CollageFrame
+                      imageUrl="/productos/helado-frutilla.jpg"
+                      imageAlt="Helado Samanco Frutilla"
                       bg="bg-collage-pink"
                       rotate={4}
                       className="col-span-1"
-                      badge={<CollageSticker bg="bg-collage-lime" rotate={8}>2x1</CollageSticker>}
+                    />
+                    <CollageFrame
+                      imageUrl="/productos/choco-pie.jpg"
+                      imageAlt="Choco Pie"
+                      bg="bg-collage-lime"
+                      rotate={-4}
+                      className="col-span-1 mt-6"
+                      badge={<CollageSticker bg="bg-collage-pink" text="text-white" rotate={8}>🆕 Nuevo</CollageSticker>}
                       badgePosition="bottom-right"
                     />
-                    <CollageFrame emoji="🥟" bg="bg-collage-lime" rotate={-4} className="col-span-1 mt-6" />
                   </div>
                 ) : (
                   <div className="flex justify-center px-8 md:px-16">
                     <CollageFrame
-                      emoji={slide.visual.emoji}
+                      imageUrl={slide.visual.imageUrl}
+                      imageAlt={slide.visual.imageAlt}
                       bg={slide.visual.bg}
                       rotate={-4}
                       className="w-full max-w-xs"
