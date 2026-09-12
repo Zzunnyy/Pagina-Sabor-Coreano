@@ -19,21 +19,26 @@ export default function Navbar() {
         </Link>
         {/* Right Actions */}
         <div className="hidden md:flex items-center gap-4">
+          <nav className="flex items-center gap-4">
+            <Link
+              href="/nosotros"
+              className="px-6 py-2.5 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
+            >
+              Nosotros
+            </Link>
+            <Link
+              href="/contacto"
+              className="px-6 py-2.5 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
+            >
+              Contacto
+            </Link>
+          </nav>
           <Link
             href="/productos"
             className="px-6 py-2.5 bg-collage-lime hover:bg-collage-orange text-collage-ink hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
           >
             Productos
           </Link>
-          <a
-            href="https://wa.me/56912345678"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
-          >
-            <img src="/iconos/whatsapp.webp" alt="WhatsApp" className="w-6 h-6 object-contain" />
-            Contáctanos
-          </a>
           <Link
             href="/login"
             className="px-6 py-2.5 bg-collage-indigo hover:bg-collage-pink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[2px_2px_0_0_var(--color-collage-ink)]"
@@ -71,6 +76,13 @@ export default function Navbar() {
                 Productos
               </Link>
               <Link
+                href="/nosotros"
+                onClick={() => setIsOpen(false)}
+                className="py-2 px-3 rounded-lg transition-all text-gray-700 hover:bg-red-50 hover:text-red-600"
+              >
+                Nosotros
+              </Link>
+              <Link
                 href="/contacto"
                 onClick={() => setIsOpen(false)}
                 className="py-2 px-3 rounded-lg transition-all text-gray-700 hover:bg-red-50 hover:text-red-600"
@@ -79,15 +91,6 @@ export default function Navbar() {
               </Link>
             </nav>
             <div className="flex flex-col gap-3 mt-4">
-              <a
-                href="https://wa.me/56912345678"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 text-white px-6 py-3 rounded-xl font-semibold transition-all bg-green-500 hover:bg-green-600 active:scale-95"
-              >
-                <img src="/iconos/whatsapp.webp" alt="WhatsApp" className="w-6 h-6 object-contain" />
-                Contáctanos
-              </a>
               <Link
                 href="/login"
                 onClick={() => setIsOpen(false)}

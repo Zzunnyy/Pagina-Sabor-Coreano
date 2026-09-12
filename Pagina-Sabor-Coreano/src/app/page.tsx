@@ -5,7 +5,9 @@ import Link from "next/link";
 import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
 import ProductCard from "@/components/ProductCard";
-import { CATEGORIES, PRODUCTS } from "@/data/products";
+import { PRODUCTS } from "@/data/products";
+
+const FEATURED_IDS = ["2", "6", "10", "15"];
 
 interface Slide {
   badges: { label: string; bg: string; text?: string; rotate: number }[];
@@ -66,8 +68,6 @@ const SLIDES: Slide[] = [
 
 export default function Home() {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("todos");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -76,14 +76,9 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  const slide = SLIDES[activeSlide];
-
-  const filteredProducts = PRODUCTS.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === "todos" || product.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const featuredProducts = FEATURED_IDS
+    .map((id) => PRODUCTS.find((product) => product.id === id))
+    .filter((product): product is (typeof PRODUCTS)[number] => Boolean(product));
 
   return (
     <div className="flex flex-col w-full relative overflow-hidden bg-collage-cream">
@@ -231,53 +226,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Product Search & Listing */}
+      {/* Featured Products */}
       <section className="relative w-full py-16 px-6 md:px-8 bg-white border-b-[3px] border-collage-ink">
         <div className="container mx-auto max-w-6xl">
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-16">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Busca tus productos favoritos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] focus:outline-none focus:-translate-y-1 focus:shadow-[6px_6px_0_0_var(--color-collage-ink)] transition-all font-medium text-lg placeholder-collage-ink/50"
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">
-                🔍
-              </div>
-            </div>
+          <div className="flex flex-col items-center text-center gap-3 mb-12">
+            <CollageSticker bg="bg-collage-lime" rotate={-3}>Lo más pedido</CollageSticker>
+            <h2 className="font-display font-semibold text-4xl md:text-5xl text-collage-ink">
+              Nuestros Favoritos
+            </h2>
+            <p className="text-collage-ink/70 text-lg max-w-xl">
+              Una probadita de nuestro catálogo. Ramyeon, bebidas y postres coreanos, listos para pedir.
+            </p>
           </div>
 
-          {/* Category Filters & Product Grid */}
-          <div className="flex flex-col">
-            <div className="flex flex-wrap gap-3 mb-10 justify-center">
-              {CATEGORIES.map((cat) => (
-                <button key={cat.slug} onClick={() => setActiveCategory(cat.slug)}>
-                  <CollageSticker
-                    bg={activeCategory === cat.slug ? "bg-collage-indigo" : "bg-white"}
-                    text={activeCategory === cat.slug ? "text-white" : "text-collage-ink"}
-                    rotate={activeCategory === cat.slug ? -2 : 0}
-                    className="cursor-pointer transition-transform hover:-translate-y-0.5"
-                  >
-                    {cat.label}
-                  </CollageSticker>
-                </button>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
 
-            {filteredProducts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-collage-ink/60 text-xl font-medium">No se encontraron productos para "{searchQuery}"</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 md:gap-10">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
+          <div className="flex justify-center mt-16">
+            <Link
+              href="/productos"
+              className="inline-flex items-center justify-center px-8 py-3 bg-collage-indigo text-white font-display font-semibold rounded-full border-[3px] border-collage-ink shadow-[5px_5px_0_0_var(--color-collage-ink)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[7px_7px_0_0_var(--color-collage-ink)] active:translate-y-0 active:shadow-[3px_3px_0_0_var(--color-collage-ink)]"
+            >
+              Ver Catálogo Completo →
+            </Link>
           </div>
         </div>
       </section>
