@@ -8,7 +8,7 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["--prefix", "Pagina-Sabor-Coreano", "run", "dev"],
       "port": 3000
     }
   ]
