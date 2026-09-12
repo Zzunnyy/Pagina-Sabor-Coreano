@@ -29,7 +29,7 @@ const SLIDES: Slide[] = [
     ],
     title: "Sabor Coreano",
     script: "en tu puerta",
-    desc: "Descubre los mejores platillos coreanos, preparados con ingredientes frescos y el calor de las recetas tradicionales.",
+    desc: "Descubre los mejores productos coreanos, importados directamente para que disfrutes el auténtico sabor en casa.",
     cta: { label: "Ver Catálogo", href: "/productos" },
     ctaSecondary: { label: "Nuestra Historia", href: "/nosotros" },
     visual: { type: "grid" },

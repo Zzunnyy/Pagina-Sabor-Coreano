@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fredoka, Caveat } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { CartProvider } from "@/context/CartContext";
-import Cart from "@/components/Cart";
+import SiteChrome from "@/components/SiteChrome";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +28,7 @@ const caveat = Caveat({
 
 export const metadata: Metadata = {
   title: "Sabor Coreano | Auténtico sabor en tu puerta",
-  description: "Descubre los mejores platillos y productos coreanos, preparados con ingredientes frescos y recetas tradicionales.",
+  description: "Descubre los mejores productos coreanos, importados directamente para que disfrutes el auténtico sabor en casa.",
 };
 
 export default function RootLayout({
@@ -45,10 +43,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <CartProvider>
-          <Navbar />
-          {children}
-          <Cart />
-          <Footer />
+          <SiteChrome>{children}</SiteChrome>
         </CartProvider>
       </body>
     </html>

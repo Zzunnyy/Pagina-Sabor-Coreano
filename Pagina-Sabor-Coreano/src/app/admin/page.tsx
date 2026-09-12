@@ -1,8 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CollageSticker from "@/components/CollageSticker";
+import {
+  ApiError,
+  adminFetch,
+  adminLogout,
+  getApiUrl,
+  getSession,
+  setApiUrl as persistApiUrl,
+  verifyAdminSession,
+  type AdminUser,
+} from "@/lib/adminApi";
+import { buildInventoryTemplateCsv, parseInventoryFile, type ImportRow } from "@/lib/inventoryImport";
 
 interface DashboardData {
   total_ventas: number;
@@ -25,55 +37,98 @@ interface OrderItem {
   };
 }
 
-const MOCK_DASHBOARD: DashboardData = {
-  total_ventas: 184500,
-  pedidos_pendientes: 3,
-  total_productos: 12,
-  productos_bajo_stock: [
-    { id: 1, nombre: "Tteokbokki Especial", stock: 2 },
-    { id: 2, nombre: "Soju Uva Verde", stock: 4 },
-  ],
-  total_clientes: 28,
-};
+interface Product {
+  id: number;
+  category_id: number;
+  nombre: string;
+  precio: string | number;
+  descripcion: string | null;
+  stock: number;
+  sku: string;
+  es_activo: boolean;
+}
 
-const MOCK_ORDERS: OrderItem[] = [
-  {
-    id: 101,
-    n_orden: "ORD-2026-001",
-    status: "pendiente",
-    total: 24990,
-    created_at: "Hace 5 minutos",
-    user: { name: "Camila Soto", email: "camila@example.com", telefono: "+56 9 8765 4321" },
-  },
-  {
-    id: 102,
-    n_orden: "ORD-2026-002",
-    status: "preparando",
-    total: 38500,
-    created_at: "Hace 15 minutos",
-    user: { name: "Benjamín Silva", email: "benja@example.com", telefono: "+56 9 1234 5678" },
-  },
-  {
-    id: 103,
-    n_orden: "ORD-2026-003",
-    status: "en_camino",
-    total: 15990,
-    created_at: "Hace 40 minutos",
-    user: { name: "Matías Rojas", email: "matias@example.com", telefono: "+56 9 9988 7766" },
-  },
+type Tab = "metricas" | "inventario" | "pedidos" | "nuevo_producto" | "importar";
+
+const ORDER_STATUSES: { value: string; label: string }[] = [
+  { value: "preparando", label: "Preparando" },
+  { value: "en_camino", label: "Despachar" },
+  { value: "entregado", label: "Entregado" },
 ];
 
-export default function AdminPage() {
-  const [apiUrl, setApiUrl] = useState("http://localhost/api");
-  const [authToken, setAuthToken] = useState("");
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [dashboard, setDashboard] = useState<DashboardData>(MOCK_DASHBOARD);
-  const [orders, setOrders] = useState<OrderItem[]>(MOCK_ORDERS);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"pedidos" | "nuevo_producto" | "metricas">("metricas");
+interface ImportRowStatus extends ImportRow {
+  action: "crear" | "actualizar" | "error";
+  error?: string;
+  matchedProductId?: number;
+}
 
-  // Formulario nuevo producto
+function computeRowStatus(row: ImportRow, skuMap: Map<string, Product>): ImportRowStatus {
+  if (!row.sku) {
+    return { ...row, action: "error", error: "Falta el SKU." };
+  }
+
+  const existing = skuMap.get(row.sku.toLowerCase());
+
+  if (existing) {
+    if (row.precio === null && row.stock === null) {
+      return { ...row, action: "error", error: "No trae precio ni stock para actualizar." };
+    }
+    if (row.precio !== null && row.precio < 0) {
+      return { ...row, action: "error", error: "Precio inválido." };
+    }
+    if (row.stock !== null && row.stock < 0) {
+      return { ...row, action: "error", error: "Stock inválido." };
+    }
+    return { ...row, action: "actualizar", matchedProductId: existing.id };
+  }
+
+  const missing: string[] = [];
+  if (!row.nombre) missing.push("nombre");
+  if (row.precio === null) missing.push("precio");
+  if (row.stock === null) missing.push("stock");
+  if (row.category_id === null) missing.push("category_id");
+
+  const invalid: string[] = [];
+  if (row.precio !== null && row.precio < 0) invalid.push("precio");
+  if (row.stock !== null && row.stock < 0) invalid.push("stock");
+
+  if (missing.length > 0 || invalid.length > 0) {
+    const parts: string[] = [];
+    if (missing.length > 0) parts.push(`faltan campos: ${missing.join(", ")}`);
+    if (invalid.length > 0) parts.push(`valores inválidos: ${invalid.join(", ")}`);
+    return { ...row, action: "error", error: `SKU nuevo, ${parts.join("; ")}.` };
+  }
+
+  return { ...row, action: "crear" };
+}
+
+export default function AdminPage() {
+  const router = useRouter();
+
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiUrlDraft, setApiUrlDraft] = useState("");
+  const [connectionError, setConnectionError] = useState("");
+
+  const [activeTab, setActiveTab] = useState<Tab>("metricas");
+
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState("");
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState("");
+  const [productEdits, setProductEdits] = useState<Record<number, { precio: string; stock: string }>>({});
+  const [savingProductId, setSavingProductId] = useState<number | null>(null);
+  const [productSearch, setProductSearch] = useState("");
+
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+
   const [nuevoProducto, setNuevoProducto] = useState({
     nombre: "",
     precio: "",
@@ -82,116 +137,206 @@ export default function AdminPage() {
     sku: "",
     descripcion: "",
   });
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createFieldErrors, setCreateFieldErrors] = useState<Record<string, string[]>>({});
+  const [createSuccess, setCreateSuccess] = useState("");
 
-  const addLog = (msg: string) => {
-    const time = new Date().toLocaleTimeString();
-    setLogs((prev) => [`[${time}] ${msg}`, ...prev.slice(0, 15)]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importParseError, setImportParseError] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importSummary, setImportSummary] = useState<{
+    created: number;
+    updated: number;
+    errors: { row: number; sku: string; message: string }[];
+  } | null>(null);
+
+  // --- Autenticación ---
+  useEffect(() => {
+    const session = getSession();
+    if (!session) {
+      router.replace("/admin/login");
+      return;
+    }
+    setUser(session.user);
+    setApiUrlDraft(getApiUrl());
+
+    verifyAdminSession()
+      .then((freshUser) => setUser(freshUser))
+      .catch(() => router.replace("/admin/login"))
+      .finally(() => setCheckingAuth(false));
+  }, [router]);
+
+  const handleLogout = async () => {
+    await adminLogout();
+    router.replace("/admin/login");
   };
 
-  // 1. Probar y consumir el endpoint de Dashboard
-  const fetchDashboard = async () => {
-    setLoading(true);
-    addLog(`Enviando GET ${apiUrl}/admin/dashboard ...`);
+  const handleApiUrlSave = () => {
+    persistApiUrl(apiUrlDraft);
+    setShowSettings(false);
+    setConnectionError("");
+  };
+
+  const reportError = (err: unknown, fallback: string) => {
+    const message = err instanceof ApiError ? err.message : fallback;
+    if (err instanceof ApiError && err.status === 0) {
+      setConnectionError(message);
+    }
+    return message;
+  };
+
+  // --- Dashboard ---
+  const fetchDashboard = useCallback(async () => {
+    setDashboardLoading(true);
+    setDashboardError("");
     try {
-      const headers: Record<string, string> = { Accept: "application/json" };
-      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
-
-      const res = await fetch(`${apiUrl}/admin/dashboard`, {
-        method: "GET",
-        headers,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setDashboard(data);
-        setIsConnected(true);
-        addLog(`✅ Respuesta 200 OK del Backend: ${JSON.stringify(data)}`);
-      } else {
-        setIsConnected(false);
-        addLog(`⚠️ El backend respondió con código: ${res.status} (${res.statusText}). Mostrando datos locales.`);
-      }
-    } catch (err: unknown) {
-      setIsConnected(false);
-      const errMsg = err instanceof Error ? err.message : String(err);
-      addLog(`❌ Error de conexión al backend (${errMsg}). Mostrando datos de prueba locales.`);
+      const data = await adminFetch<DashboardData>("/admin/dashboard");
+      setDashboard(data);
+      setConnectionError("");
+    } catch (err) {
+      setDashboardError(reportError(err, "No se pudieron cargar las métricas."));
     } finally {
-      setLoading(false);
+      setDashboardLoading(false);
     }
-  };
+  }, []);
 
-  // 2. Probar y consumir el endpoint de Pedidos
-  const fetchOrders = async () => {
-    setLoading(true);
-    addLog(`Enviando GET ${apiUrl}/admin/pedidos ...`);
+  // --- Inventario ---
+  const fetchProducts = useCallback(async () => {
+    setProductsLoading(true);
+    setProductsError("");
     try {
-      const headers: Record<string, string> = { Accept: "application/json" };
-      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
-
-      const res = await fetch(`${apiUrl}/admin/pedidos`, {
-        method: "GET",
-        headers,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(data);
-        addLog(`✅ Pedidos cargados desde el backend: ${data.length} ordenes`);
-      } else {
-        addLog(`⚠️ No se pudieron cargar pedidos reales (${res.status}). Usando lista de prueba.`);
-      }
-    } catch {
-      addLog(`❌ Backend no disponible para pedidos. Usando lista de prueba.`);
+      const data = await adminFetch<Product[]>("/productos");
+      setProducts(data);
+      setConnectionError("");
+    } catch (err) {
+      setProductsError(reportError(err, "No se pudo cargar el inventario."));
     } finally {
-      setLoading(false);
+      setProductsLoading(false);
     }
+  }, []);
+
+  const getEditedValue = (product: Product, field: "precio" | "stock") => {
+    const edit = productEdits[product.id];
+    if (edit && edit[field] !== undefined) return edit[field];
+    return field === "precio" ? String(product.precio) : String(product.stock);
   };
 
-  // 3. Cambiar estado de un pedido (PATCH /api/admin/pedidos/{id}/estado)
-  const handleCambiarEstado = async (orderId: number, nuevoEstado: string) => {
-    addLog(`Enviando PATCH ${apiUrl}/admin/pedidos/${orderId}/estado -> status: "${nuevoEstado}"`);
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
-      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+  const handleProductEdit = (id: number, field: "precio" | "stock", value: string) => {
+    setProductEdits((prev) => ({
+      ...prev,
+      [id]: {
+        precio: prev[id]?.precio ?? String(products.find((p) => p.id === id)?.precio ?? ""),
+        stock: prev[id]?.stock ?? String(products.find((p) => p.id === id)?.stock ?? ""),
+        [field]: value,
+      },
+    }));
+  };
 
-      const res = await fetch(`${apiUrl}/admin/pedidos/${orderId}/estado`, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({ status: nuevoEstado }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        addLog(`✅ Estado actualizado en el backend: ${JSON.stringify(data.message)}`);
-      } else {
-        addLog(`⚠️ Backend respondió ${res.status}. Actualizando visualmente en la interfaz.`);
-      }
-    } catch {
-      addLog(`ℹ️ Backend offline. Actualizando estado localmente.`);
-    }
-
-    // Actualizar estado local para feedback instantáneo
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: nuevoEstado } : o))
+  const hasProductChanges = (product: Product) => {
+    const edit = productEdits[product.id];
+    if (!edit) return false;
+    return (
+      (edit.precio !== undefined && edit.precio !== String(product.precio)) ||
+      (edit.stock !== undefined && edit.stock !== String(product.stock))
     );
   };
 
-  // 4. Crear nuevo producto (POST /api/admin/productos)
+  const handleSaveProduct = async (product: Product) => {
+    const edit = productEdits[product.id];
+    if (!edit) return;
+
+    const payload: Record<string, number> = {};
+    if (edit.precio !== undefined && edit.precio !== String(product.precio)) {
+      payload.precio = parseFloat(edit.precio);
+    }
+    if (edit.stock !== undefined && edit.stock !== String(product.stock)) {
+      payload.stock = parseInt(edit.stock, 10);
+    }
+    if (Object.keys(payload).length === 0) return;
+
+    setSavingProductId(product.id);
+    try {
+      const updated = await adminFetch<Product>(`/admin/productos/${product.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? updated : p)));
+      setProductEdits((prev) => {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      });
+      setConnectionError("");
+      fetchDashboard();
+    } catch (err) {
+      setProductsError(reportError(err, "No se pudo guardar el cambio."));
+    } finally {
+      setSavingProductId(null);
+    }
+  };
+
+  const handleDeactivateProduct = async (product: Product) => {
+    if (!confirm(`¿Quitar "${product.nombre}" del catálogo? Esto no borra su historial de ventas.`)) return;
+
+    setSavingProductId(product.id);
+    try {
+      await adminFetch(`/admin/productos/${product.id}`, { method: "DELETE" });
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, es_activo: false } : p)));
+      setConnectionError("");
+      fetchDashboard();
+    } catch (err) {
+      setProductsError(reportError(err, "No se pudo desactivar el producto."));
+    } finally {
+      setSavingProductId(null);
+    }
+  };
+
+  // --- Pedidos ---
+  const fetchOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    setOrdersError("");
+    try {
+      const data = await adminFetch<OrderItem[]>("/admin/pedidos");
+      setOrders(data);
+      setConnectionError("");
+    } catch (err) {
+      setOrdersError(reportError(err, "No se pudieron cargar los pedidos."));
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
+  const handleCambiarEstado = async (orderId: number, nuevoEstado: string) => {
+    setUpdatingOrderId(orderId);
+    try {
+      await adminFetch(`/admin/pedidos/${orderId}/estado`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nuevoEstado }),
+      });
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: nuevoEstado } : o)));
+      setConnectionError("");
+      fetchDashboard();
+    } catch (err) {
+      setOrdersError(reportError(err, "No se pudo actualizar el estado del pedido."));
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  // --- Crear producto ---
   const handleCrearProducto = async (e: React.FormEvent) => {
     e.preventDefault();
-    addLog(`Enviando POST ${apiUrl}/admin/productos con: "${nuevoProducto.nombre}"`);
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
-      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+    setCreateError("");
+    setCreateFieldErrors({});
+    setCreateSuccess("");
+    setCreatingProduct(true);
 
-      const res = await fetch(`${apiUrl}/admin/productos`, {
+    try {
+      const data = await adminFetch<{ message: string; producto: Product }>("/admin/productos", {
         method: "POST",
-        headers,
         body: JSON.stringify({
           ...nuevoProducto,
           precio: parseFloat(nuevoProducto.precio),
@@ -199,53 +344,177 @@ export default function AdminPage() {
           category_id: parseInt(nuevoProducto.category_id, 10),
         }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        addLog(`🎉 ¡Producto creado en la Base de Datos con ID ${data.producto?.id}!`);
-        alert("¡Producto creado con éxito en el backend!");
+      setCreateSuccess(`"${data.producto.nombre}" se agregó al catálogo correctamente.`);
+      setNuevoProducto({ nombre: "", precio: "", category_id: "1", stock: "20", sku: "", descripcion: "" });
+      setProducts((prev) => [data.producto, ...prev]);
+      setConnectionError("");
+      fetchDashboard();
+    } catch (err) {
+      if (err instanceof ApiError && err.errors) {
+        setCreateFieldErrors(err.errors);
+        setCreateError("Revisa los campos marcados.");
       } else {
-        addLog(`⚠️ Backend respondió ${res.status}. Valida que el SKU sea único.`);
-        alert(`Respuesta del backend: ${res.status} (${res.statusText})`);
+        setCreateError(reportError(err, "No se pudo crear el producto."));
       }
-    } catch {
-      addLog(`❌ Sin conexión al backend para guardar en BD.`);
-      alert("No se pudo contactar al backend. Asegúrate de que el servidor esté activo.");
+    } finally {
+      setCreatingProduct(false);
     }
   };
 
-  useEffect(() => {
+  // --- Importar inventario (CSV/Excel) ---
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportParseError("");
+    setImportSummary(null);
+    setImportRows([]);
+
+    try {
+      const rows = await parseInventoryFile(file);
+      if (rows.length === 0) {
+        setImportParseError("No se encontraron filas con SKU o nombre en el archivo.");
+        return;
+      }
+      setImportRows(rows);
+    } catch {
+      setImportParseError("No se pudo leer el archivo. Verifica que sea un CSV o Excel (.xlsx) válido.");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const importPreview = useMemo(() => {
+    const skuMap = new Map(products.map((p) => [p.sku.toLowerCase(), p]));
+    return importRows.map((row) => computeRowStatus(row, skuMap));
+  }, [importRows, products]);
+
+  const importCounts = useMemo(
+    () =>
+      importPreview.reduce(
+        (acc, row) => {
+          acc[row.action]++;
+          return acc;
+        },
+        { crear: 0, actualizar: 0, error: 0 }
+      ),
+    [importPreview]
+  );
+
+  const handleDownloadTemplate = () => {
+    const blob = new Blob([buildInventoryTemplateCsv()], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla_inventario.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleConfirmImport = async () => {
+    setImporting(true);
+    setImportSummary(null);
+    setImportProgress(0);
+
+    const skuMap = new Map(products.map((p) => [p.sku.toLowerCase(), p]));
+    let created = 0;
+    let updated = 0;
+    const errors: { row: number; sku: string; message: string }[] = [];
+
+    for (const row of importRows) {
+      const status = computeRowStatus(row, skuMap);
+
+      if (status.action === "error") {
+        errors.push({ row: row.rowNumber, sku: row.sku || "(sin sku)", message: status.error! });
+        setImportProgress((n) => n + 1);
+        continue;
+      }
+
+      try {
+        if (status.action === "actualizar" && status.matchedProductId) {
+          const payload: Record<string, number> = {};
+          if (row.precio !== null) payload.precio = row.precio;
+          if (row.stock !== null) payload.stock = row.stock;
+
+          const updatedProduct = await adminFetch<Product>(`/admin/productos/${status.matchedProductId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          });
+          skuMap.set(row.sku.toLowerCase(), updatedProduct);
+          updated++;
+        } else {
+          const data = await adminFetch<{ producto: Product }>("/admin/productos", {
+            method: "POST",
+            body: JSON.stringify({
+              category_id: row.category_id,
+              nombre: row.nombre,
+              precio: row.precio,
+              stock: row.stock,
+              sku: row.sku,
+              descripcion: row.descripcion || undefined,
+            }),
+          });
+          skuMap.set(row.sku.toLowerCase(), data.producto);
+          created++;
+        }
+      } catch (err) {
+        errors.push({
+          row: row.rowNumber,
+          sku: row.sku,
+          message: err instanceof ApiError ? err.message : "Error inesperado.",
+        });
+      }
+
+      setImportProgress((n) => n + 1);
+    }
+
+    setImportSummary({ created, updated, errors });
+    setImportRows([]);
+    setImporting(false);
+    setConnectionError("");
+    fetchProducts();
     fetchDashboard();
-  }, []);
+  };
+
+  useEffect(() => {
+    if (checkingAuth) return;
+    fetchDashboard();
+  }, [checkingAuth, fetchDashboard]);
+
+  useEffect(() => {
+    if (checkingAuth) return;
+    if (activeTab === "inventario" || activeTab === "importar") fetchProducts();
+    if (activeTab === "pedidos") fetchOrders();
+  }, [checkingAuth, activeTab, fetchProducts, fetchOrders]);
+
+  if (checkingAuth || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-collage-cream">
+        <p className="font-display font-semibold text-collage-ink">Verificando acceso...</p>
+      </div>
+    );
+  }
+
+  const filteredProducts = products.filter((p) => {
+    const q = productSearch.trim().toLowerCase();
+    if (!q) return true;
+    return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
+  });
 
   return (
     <div className="min-h-screen bg-collage-cream text-collage-ink p-4 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header con estilo Sticker Coreano */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b-[3px] border-collage-ink">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <CollageSticker bg="bg-collage-orange" text="text-white" rotate={-2}>
-                관리자 패널 · Panel Admin
-              </CollageSticker>
-              {isConnected === true ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 border-2 border-green-600 rounded-full text-xs font-bold font-display">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  Backend Conectado
-                </span>
-              ) : isConnected === false ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 border-2 border-amber-600 rounded-full text-xs font-bold font-display">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  Modo Vista Previa (Backend Offline)
-                </span>
-              ) : null}
-            </div>
+            <CollageSticker bg="bg-collage-orange" text="text-white" rotate={-2} className="mb-2">
+              관리자 패널 · Panel de Administración
+            </CollageSticker>
             <h1 className="font-display font-bold text-3xl md:text-5xl text-collage-ink">
-              Panel de Administración
+              Hola, {user.name.split(" ")[0]} 👋
             </h1>
             <p className="font-script text-xl md:text-2xl text-collage-indigo">
-              Prueba en vivo de los endpoints del backend Laravel
+              esto es lo que pasa detrás del local
             </p>
           </div>
 
@@ -257,58 +526,62 @@ export default function AdminPage() {
               ← Ir a la Tienda
             </Link>
             <button
-              onClick={fetchDashboard}
-              disabled={loading}
-              className="px-5 py-2.5 bg-collage-lime hover:bg-collage-orange hover:text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all active:translate-y-0.5 active:shadow-[2px_2px_0_0_var(--color-collage-ink)] flex items-center gap-2"
+              onClick={() => setShowSettings((v) => !v)}
+              aria-label="Configuración de conexión"
+              className="w-11 h-11 flex items-center justify-center bg-white text-collage-ink rounded-xl border-[3px] border-collage-ink shadow-[3px_3px_0_0_var(--color-collage-ink)] hover:bg-slate-50 transition-all"
             >
-              {loading ? "Cargando..." : "🔄 Probar Endpoint Ahora"}
+              ⚙️
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-5 py-2.5 bg-collage-ink text-white font-display font-semibold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_rgba(0,0,0,0.3)] hover:bg-red-600 transition-all"
+            >
+              Cerrar sesión
             </button>
           </div>
         </div>
 
-        {/* Barra de configuración de conexión rápida */}
-        <div className="bg-white p-4 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <label className="block font-display font-semibold mb-1 text-xs uppercase tracking-wider text-slate-600">
-                URL del Backend API
-              </label>
+        {showSettings && (
+          <div className="bg-white p-4 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
+            <label className="block font-display font-semibold mb-1 text-xs uppercase tracking-wider text-slate-600">
+              URL del backend (solo para desarrollo local del equipo)
+            </label>
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="http://localhost/api o http://localhost:8000/api"
-                className="w-full px-3 py-2 border-2 border-collage-ink rounded-lg font-mono text-xs bg-slate-50"
+                value={apiUrlDraft}
+                onChange={(e) => setApiUrlDraft(e.target.value)}
+                placeholder="http://localhost/api"
+                className="flex-1 px-3 py-2 border-2 border-collage-ink rounded-lg font-mono text-xs bg-slate-50"
               />
-            </div>
-            <div>
-              <label className="block font-display font-semibold mb-1 text-xs uppercase tracking-wider text-slate-600">
-                Token Sanctum (Opcional si usas login)
-              </label>
-              <input
-                type="password"
-                value={authToken}
-                onChange={(e) => setAuthToken(e.target.value)}
-                placeholder="Pega aquí el token si está protegido..."
-                className="w-full px-3 py-2 border-2 border-collage-ink rounded-lg font-mono text-xs bg-slate-50"
-              />
-            </div>
-            <div className="flex items-end gap-2">
               <button
-                onClick={() => {
-                  fetchDashboard();
-                  fetchOrders();
-                }}
-                className="w-full py-2.5 bg-collage-indigo text-white font-display font-semibold rounded-lg border-2 border-collage-ink shadow-[2px_2px_0_0_var(--color-collage-ink)] hover:bg-collage-pink transition-all text-xs"
+                onClick={handleApiUrlSave}
+                className="px-4 py-2 bg-collage-indigo text-white font-display font-semibold rounded-lg border-2 border-collage-ink text-xs hover:bg-collage-pink transition-all"
               >
-                Probar Petición HTTP
+                Guardar
               </button>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Pestañas de navegación */}
-        <div className="flex gap-3 border-b-2 border-collage-ink pb-2">
+        {connectionError && (
+          <div className="p-4 bg-amber-50 border-[3px] border-amber-500 rounded-2xl flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm font-semibold text-amber-900">⚠️ {connectionError}</p>
+            <button
+              onClick={() => {
+                fetchDashboard();
+                if (activeTab === "inventario") fetchProducts();
+                if (activeTab === "pedidos") fetchOrders();
+              }}
+              className="px-3 py-1.5 bg-white border-2 border-amber-500 text-amber-900 font-display font-bold text-xs rounded-lg hover:bg-amber-100 transition-all"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-3 border-b-2 border-collage-ink pb-2 flex-wrap">
           <button
             onClick={() => setActiveTab("metricas")}
             className={`px-5 py-2 font-display font-bold text-sm rounded-xl border-[3px] border-collage-ink transition-all ${
@@ -317,122 +590,244 @@ export default function AdminPage() {
                 : "bg-white text-collage-ink hover:bg-slate-100"
             }`}
           >
-            📊 Métricas (GET /dashboard)
+            📊 Métricas
           </button>
           <button
-            onClick={() => {
-              setActiveTab("pedidos");
-              fetchOrders();
-            }}
+            onClick={() => setActiveTab("inventario")}
+            className={`px-5 py-2 font-display font-bold text-sm rounded-xl border-[3px] border-collage-ink transition-all ${
+              activeTab === "inventario"
+                ? "bg-collage-lime text-collage-ink shadow-[3px_3px_0_0_var(--color-collage-ink)] -translate-y-1"
+                : "bg-white text-collage-ink hover:bg-slate-100"
+            }`}
+          >
+            📦 Inventario
+          </button>
+          <button
+            onClick={() => setActiveTab("pedidos")}
             className={`px-5 py-2 font-display font-bold text-sm rounded-xl border-[3px] border-collage-ink transition-all ${
               activeTab === "pedidos"
                 ? "bg-collage-orange text-white shadow-[3px_3px_0_0_var(--color-collage-ink)] -translate-y-1"
                 : "bg-white text-collage-ink hover:bg-slate-100"
             }`}
           >
-            📦 Pedidos (GET y PATCH /pedidos)
+            🛵 Pedidos
           </button>
           <button
             onClick={() => setActiveTab("nuevo_producto")}
             className={`px-5 py-2 font-display font-bold text-sm rounded-xl border-[3px] border-collage-ink transition-all ${
               activeTab === "nuevo_producto"
-                ? "bg-collage-lime text-collage-ink shadow-[3px_3px_0_0_var(--color-collage-ink)] -translate-y-1"
+                ? "bg-collage-pink text-white shadow-[3px_3px_0_0_var(--color-collage-ink)] -translate-y-1"
                 : "bg-white text-collage-ink hover:bg-slate-100"
             }`}
           >
-            ➕ Crear Producto (POST /productos)
+            ➕ Agregar Producto
+          </button>
+          <button
+            onClick={() => setActiveTab("importar")}
+            className={`px-5 py-2 font-display font-bold text-sm rounded-xl border-[3px] border-collage-ink transition-all ${
+              activeTab === "importar"
+                ? "bg-collage-indigo text-white shadow-[3px_3px_0_0_var(--color-collage-ink)] -translate-y-1"
+                : "bg-white text-collage-ink hover:bg-slate-100"
+            }`}
+          >
+            📥 Importar
           </button>
         </div>
 
-        {/* 1. SECCIÓN MÉTRICAS DASHBOARD */}
+        {/* MÉTRICAS */}
         {activeTab === "metricas" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Tarjeta 1: Ventas */}
-              <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] relative overflow-hidden">
-                <div className="text-3xl mb-2">💰</div>
-                <h3 className="font-display font-semibold text-xs uppercase text-slate-500">
-                  Total Ventas
-                </h3>
-                <p className="font-display font-bold text-2xl md:text-3xl text-collage-ink mt-1">
-                  ${dashboard.total_ventas.toLocaleString("es-CL")}
-                </p>
-                <div className="text-[11px] text-slate-500 font-script mt-2">
-                  calculado desde la tabla orders
-                </div>
+            <div className="flex justify-end">
+              <button
+                onClick={fetchDashboard}
+                disabled={dashboardLoading}
+                className="text-xs font-display font-bold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border-2 border-collage-ink rounded-lg disabled:opacity-50"
+              >
+                {dashboardLoading ? "Actualizando..." : "🔄 Actualizar"}
+              </button>
+            </div>
+            {dashboardLoading && !dashboard ? (
+              <p className="font-display font-semibold text-collage-ink/60">Cargando métricas...</p>
+            ) : dashboardError && !dashboard ? (
+              <div className="bg-white p-6 rounded-2xl border-[3px] border-collage-ink text-center">
+                <p className="font-semibold text-collage-ink/70 mb-3">{dashboardError}</p>
+                <button
+                  onClick={fetchDashboard}
+                  className="px-4 py-2 bg-collage-lime font-display font-bold rounded-xl border-[3px] border-collage-ink"
+                >
+                  Reintentar
+                </button>
               </div>
+            ) : dashboard ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
+                    <div className="text-3xl mb-2">💰</div>
+                    <h3 className="font-display font-semibold text-xs uppercase text-slate-500">Total Ventas</h3>
+                    <p className="font-display font-bold text-2xl md:text-3xl text-collage-ink mt-1">
+                      ${dashboard.total_ventas.toLocaleString("es-CL")}
+                    </p>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
+                    <div className="text-3xl mb-2">⏳</div>
+                    <h3 className="font-display font-semibold text-xs uppercase text-slate-500">Pedidos Pendientes</h3>
+                    <p className="font-display font-bold text-2xl md:text-3xl text-collage-orange mt-1">
+                      {dashboard.pedidos_pendientes}
+                    </p>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
+                    <div className="text-3xl mb-2">🍜</div>
+                    <h3 className="font-display font-semibold text-xs uppercase text-slate-500">Productos en Catálogo</h3>
+                    <p className="font-display font-bold text-2xl md:text-3xl text-collage-indigo mt-1">
+                      {dashboard.total_productos}
+                    </p>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
+                    <div className="text-3xl mb-2">👥</div>
+                    <h3 className="font-display font-semibold text-xs uppercase text-slate-500">Clientes Registrados</h3>
+                    <p className="font-display font-bold text-2xl md:text-3xl text-collage-pink mt-1">
+                      {dashboard.total_clientes}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Tarjeta 2: Pedidos Pendientes */}
-              <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
-                <div className="text-3xl mb-2">⏳</div>
-                <h3 className="font-display font-semibold text-xs uppercase text-slate-500">
-                  Pedidos Pendientes
-                </h3>
-                <p className="font-display font-bold text-2xl md:text-3xl text-collage-orange mt-1">
-                  {dashboard.pedidos_pendientes}
-                </p>
-                <div className="text-[11px] text-slate-500 font-script mt-2">
-                  órdenes esperando en cocina
-                </div>
-              </div>
+                {dashboard.productos_bajo_stock && dashboard.productos_bajo_stock.length > 0 && (
+                  <div className="bg-amber-50 p-4 rounded-2xl border-[3px] border-amber-500 shadow-[4px_4px_0_0_var(--color-collage-ink)]">
+                    <h4 className="font-display font-bold text-amber-900 flex items-center gap-2 mb-2">
+                      ⚠️ Stock Bajo (menos de 5 unidades)
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {dashboard.productos_bajo_stock.map((p) => (
+                        <span
+                          key={p.id}
+                          className="px-3 py-1 bg-white rounded-lg border-2 border-amber-400 font-semibold text-xs text-amber-900"
+                        >
+                          {p.nombre}: <b className="text-red-600">{p.stock} unids</b>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : null}
+          </div>
+        )}
 
-              {/* Tarjeta 3: Total Productos */}
-              <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
-                <div className="text-3xl mb-2">🍜</div>
-                <h3 className="font-display font-semibold text-xs uppercase text-slate-500">
-                  Platillos en Carta
-                </h3>
-                <p className="font-display font-bold text-2xl md:text-3xl text-collage-indigo mt-1">
-                  {dashboard.total_productos}
-                </p>
-                <div className="text-[11px] text-slate-500 font-script mt-2">
-                  menú activo de sabor coreano
-                </div>
-              </div>
-
-              {/* Tarjeta 4: Clientes */}
-              <div className="bg-white p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)]">
-                <div className="text-3xl mb-2">👥</div>
-                <h3 className="font-display font-semibold text-xs uppercase text-slate-500">
-                  Clientes Registrados
-                </h3>
-                <p className="font-display font-bold text-2xl md:text-3xl text-collage-pink mt-1">
-                  {dashboard.total_clientes}
-                </p>
-                <div className="text-[11px] text-slate-500 font-script mt-2">
-                  usuarios con rol &quot;cliente&quot;
-                </div>
-              </div>
+        {/* INVENTARIO */}
+        {activeTab === "inventario" && (
+          <div className="bg-white p-6 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h3 className="font-display font-bold text-xl text-collage-ink">Inventario y Precios</h3>
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Buscar por nombre o SKU..."
+                className="px-3 py-2 border-2 border-collage-ink rounded-lg text-sm w-full sm:w-64"
+              />
             </div>
 
-            {/* Alerta de Stock Bajo */}
-            {dashboard.productos_bajo_stock && dashboard.productos_bajo_stock.length > 0 && (
-              <div className="bg-amber-50 p-4 rounded-2xl border-[3px] border-amber-500 shadow-[4px_4px_0_0_var(--color-collage-ink)]">
-                <h4 className="font-display font-bold text-amber-900 flex items-center gap-2 mb-2">
-                  ⚠️ Alerta de Stock Bajo (&lt; 5 unidades)
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {dashboard.productos_bajo_stock.map((p) => (
-                    <span
-                      key={p.id}
-                      className="px-3 py-1 bg-white rounded-lg border-2 border-amber-400 font-semibold text-xs text-amber-900"
-                    >
-                      {p.nombre}: <b className="text-red-600">{p.stock} unids</b>
-                    </span>
-                  ))}
-                </div>
+            {productsLoading && products.length === 0 ? (
+              <p className="font-display font-semibold text-collage-ink/60 py-6 text-center">Cargando inventario...</p>
+            ) : productsError && products.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="font-semibold text-collage-ink/70 mb-3">{productsError}</p>
+                <button
+                  onClick={fetchProducts}
+                  className="px-4 py-2 bg-collage-lime font-display font-bold rounded-xl border-[3px] border-collage-ink"
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-collage-ink text-xs uppercase font-display text-slate-600">
+                      <th className="py-3 px-2">SKU</th>
+                      <th className="py-3 px-2">Nombre</th>
+                      <th className="py-3 px-2">Precio ($)</th>
+                      <th className="py-3 px-2">Stock</th>
+                      <th className="py-3 px-2">Estado</th>
+                      <th className="py-3 px-2 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredProducts.map((product) => (
+                      <tr key={product.id} className={!product.es_activo ? "opacity-50" : ""}>
+                        <td className="py-3 px-2 font-mono text-xs font-bold">{product.sku}</td>
+                        <td className="py-3 px-2 font-semibold">{product.nombre}</td>
+                        <td className="py-3 px-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            disabled={!product.es_activo}
+                            value={getEditedValue(product, "precio")}
+                            onChange={(e) => handleProductEdit(product.id, "precio", e.target.value)}
+                            className="w-24 px-2 py-1 border-2 border-collage-ink rounded-lg disabled:bg-slate-100"
+                          />
+                        </td>
+                        <td className="py-3 px-2">
+                          <input
+                            type="number"
+                            disabled={!product.es_activo}
+                            value={getEditedValue(product, "stock")}
+                            onChange={(e) => handleProductEdit(product.id, "stock", e.target.value)}
+                            className={`w-20 px-2 py-1 border-2 rounded-lg disabled:bg-slate-100 ${
+                              product.stock < 5 ? "border-red-400 text-red-600 font-bold" : "border-collage-ink"
+                            }`}
+                          />
+                        </td>
+                        <td className="py-3 px-2">
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold font-display uppercase border ${
+                              product.es_activo
+                                ? "bg-green-100 text-green-800 border-green-400"
+                                : "bg-slate-100 text-slate-500 border-slate-300"
+                            }`}
+                          >
+                            {product.es_activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-right space-x-1 whitespace-nowrap">
+                          <button
+                            onClick={() => handleSaveProduct(product)}
+                            disabled={!hasProductChanges(product) || savingProductId === product.id}
+                            className="px-2.5 py-1 bg-collage-lime hover:bg-collage-orange hover:text-white text-xs font-bold rounded border-2 border-collage-ink disabled:opacity-40 disabled:pointer-events-none transition-all"
+                          >
+                            {savingProductId === product.id ? "..." : "Guardar"}
+                          </button>
+                          {product.es_activo && (
+                            <button
+                              onClick={() => handleDeactivateProduct(product)}
+                              disabled={savingProductId === product.id}
+                              className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded border-2 border-red-300 disabled:opacity-40"
+                            >
+                              Quitar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredProducts.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-collage-ink/50 font-semibold">
+                          No hay productos que coincidan con la búsqueda.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         )}
 
-        {/* 2. SECCIÓN PEDIDOS */}
+        {/* PEDIDOS */}
         {activeTab === "pedidos" && (
           <div className="bg-white p-6 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-display font-bold text-xl text-collage-ink">
-                Gestión de Pedidos en Vivo
-              </h3>
+              <h3 className="font-display font-bold text-xl text-collage-ink">Gestión de Pedidos en Vivo</h3>
               <button
                 onClick={fetchOrders}
                 className="text-xs font-display font-bold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border-2 border-collage-ink rounded-lg"
@@ -441,84 +836,104 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b-2 border-collage-ink text-xs uppercase font-display text-slate-600">
-                    <th className="py-3 px-2">N° Orden</th>
-                    <th className="py-3 px-2">Cliente</th>
-                    <th className="py-3 px-2">Teléfono</th>
-                    <th className="py-3 px-2">Total</th>
-                    <th className="py-3 px-2">Estado</th>
-                    <th className="py-3 px-2 text-right">Acción (PATCH)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {orders.map((o) => (
-                    <tr key={o.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-2 font-mono font-bold">{o.n_orden}</td>
-                      <td className="py-3 px-2 font-semibold">{o.user?.name || "Cliente Anónimo"}</td>
-                      <td className="py-3 px-2 text-slate-600">{o.user?.telefono || "Sin teléfono"}</td>
-                      <td className="py-3 px-2 font-bold">${o.total.toLocaleString("es-CL")}</td>
-                      <td className="py-3 px-2">
-                        <span
-                          className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold font-display uppercase ${
-                            o.status === "pendiente"
-                              ? "bg-amber-100 text-amber-800 border border-amber-400"
-                              : o.status === "preparando"
-                              ? "bg-blue-100 text-blue-800 border border-blue-400"
-                              : o.status === "en_camino"
-                              ? "bg-purple-100 text-purple-800 border border-purple-400"
-                              : "bg-green-100 text-green-800 border border-green-400"
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 text-right space-x-1">
-                        <button
-                          onClick={() => handleCambiarEstado(o.id, "preparando")}
-                          className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded border border-blue-300"
-                        >
-                          Cocina
-                        </button>
-                        <button
-                          onClick={() => handleCambiarEstado(o.id, "en_camino")}
-                          className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded border border-purple-300"
-                        >
-                          Despachar
-                        </button>
-                        <button
-                          onClick={() => handleCambiarEstado(o.id, "entregado")}
-                          className="px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded border border-green-300"
-                        >
-                          Entregado
-                        </button>
-                      </td>
+            {ordersLoading && orders.length === 0 ? (
+              <p className="font-display font-semibold text-collage-ink/60 py-6 text-center">Cargando pedidos...</p>
+            ) : ordersError && orders.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="font-semibold text-collage-ink/70 mb-3">{ordersError}</p>
+                <button
+                  onClick={fetchOrders}
+                  className="px-4 py-2 bg-collage-lime font-display font-bold rounded-xl border-[3px] border-collage-ink"
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-collage-ink text-xs uppercase font-display text-slate-600">
+                      <th className="py-3 px-2">N° Orden</th>
+                      <th className="py-3 px-2">Cliente</th>
+                      <th className="py-3 px-2">Teléfono</th>
+                      <th className="py-3 px-2">Total</th>
+                      <th className="py-3 px-2">Estado</th>
+                      <th className="py-3 px-2 text-right">Acción</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {orders.map((o) => (
+                      <tr key={o.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-2 font-mono font-bold">{o.n_orden}</td>
+                        <td className="py-3 px-2 font-semibold">{o.user?.name || "Cliente Anónimo"}</td>
+                        <td className="py-3 px-2 text-slate-600">{o.user?.telefono || "Sin teléfono"}</td>
+                        <td className="py-3 px-2 font-bold">${Number(o.total).toLocaleString("es-CL")}</td>
+                        <td className="py-3 px-2">
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold font-display uppercase ${
+                              o.status === "pendiente"
+                                ? "bg-amber-100 text-amber-800 border border-amber-400"
+                                : o.status === "preparando"
+                                ? "bg-blue-100 text-blue-800 border border-blue-400"
+                                : o.status === "en_camino"
+                                ? "bg-purple-100 text-purple-800 border border-purple-400"
+                                : "bg-green-100 text-green-800 border border-green-400"
+                            }`}
+                          >
+                            {o.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-right space-x-1 whitespace-nowrap">
+                          {ORDER_STATUSES.map((s) => (
+                            <button
+                              key={s.value}
+                              onClick={() => handleCambiarEstado(o.id, s.value)}
+                              disabled={o.status === s.value || updatingOrderId === o.id}
+                              className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-collage-ink text-xs font-bold rounded border border-slate-300 disabled:opacity-30"
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                    {orders.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-collage-ink/50 font-semibold">
+                          No hay pedidos todavía.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* 3. SECCIÓN CREAR PRODUCTO */}
+        {/* NUEVO PRODUCTO */}
         {activeTab === "nuevo_producto" && (
           <div className="bg-white p-6 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] max-w-2xl">
-            <h3 className="font-display font-bold text-xl text-collage-ink mb-1">
-              Agregar Nuevo Platillo al Menú
-            </h3>
+            <h3 className="font-display font-bold text-xl text-collage-ink mb-1">Agregar Nuevo Producto al Catálogo</h3>
             <p className="text-sm text-slate-500 mb-6 font-script text-lg">
-              Prueba el endpoint POST /api/admin/productos
+              Se guarda directamente en la base de datos
             </p>
+
+            {createSuccess && (
+              <div className="p-3 bg-green-50 border-2 border-green-400 rounded-xl mb-4">
+                <p className="text-sm font-semibold text-green-700">🎉 {createSuccess}</p>
+              </div>
+            )}
+            {createError && (
+              <div className="p-3 bg-red-50 border-2 border-red-400 rounded-xl mb-4">
+                <p className="text-sm font-semibold text-red-600">{createError}</p>
+              </div>
+            )}
 
             <form onSubmit={handleCrearProducto} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-display font-bold uppercase mb-1">
-                    Nombre del Platillo
-                  </label>
+                  <label className="block text-xs font-display font-bold uppercase mb-1">Nombre del Producto</label>
                   <input
                     type="text"
                     required
@@ -527,11 +942,12 @@ export default function AdminPage() {
                     onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
                     className="w-full px-3 py-2 border-2 border-collage-ink rounded-lg font-sans"
                   />
+                  {createFieldErrors.nombre && (
+                    <p className="text-xs text-red-600 mt-1">{createFieldErrors.nombre[0]}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-xs font-display font-bold uppercase mb-1">
-                    SKU (Código único)
-                  </label>
+                  <label className="block text-xs font-display font-bold uppercase mb-1">SKU (Código único)</label>
                   <input
                     type="text"
                     required
@@ -540,14 +956,13 @@ export default function AdminPage() {
                     onChange={(e) => setNuevoProducto({ ...nuevoProducto, sku: e.target.value })}
                     className="w-full px-3 py-2 border-2 border-collage-ink rounded-lg font-mono text-sm"
                   />
+                  {createFieldErrors.sku && <p className="text-xs text-red-600 mt-1">{createFieldErrors.sku[0]}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-display font-bold uppercase mb-1">
-                    Precio ($ CLP)
-                  </label>
+                  <label className="block text-xs font-display font-bold uppercase mb-1">Precio ($ CLP)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -557,11 +972,12 @@ export default function AdminPage() {
                     onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
                     className="w-full px-3 py-2 border-2 border-collage-ink rounded-lg"
                   />
+                  {createFieldErrors.precio && (
+                    <p className="text-xs text-red-600 mt-1">{createFieldErrors.precio[0]}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-xs font-display font-bold uppercase mb-1">
-                    Stock Inicial
-                  </label>
+                  <label className="block text-xs font-display font-bold uppercase mb-1">Stock Inicial</label>
                   <input
                     type="number"
                     required
@@ -572,9 +988,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-display font-bold uppercase mb-1">
-                    Categoría ID
-                  </label>
+                  <label className="block text-xs font-display font-bold uppercase mb-1">Categoría ID</label>
                   <input
                     type="number"
                     required
@@ -583,13 +997,14 @@ export default function AdminPage() {
                     onChange={(e) => setNuevoProducto({ ...nuevoProducto, category_id: e.target.value })}
                     className="w-full px-3 py-2 border-2 border-collage-ink rounded-lg"
                   />
+                  {createFieldErrors.category_id && (
+                    <p className="text-xs text-red-600 mt-1">{createFieldErrors.category_id[0]}</p>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-display font-bold uppercase mb-1">
-                  Descripción
-                </label>
+                <label className="block text-xs font-display font-bold uppercase mb-1">Descripción</label>
                 <textarea
                   rows={3}
                   placeholder="Describe los ingredientes y nivel de picante..."
@@ -601,43 +1016,135 @@ export default function AdminPage() {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-collage-lime hover:bg-collage-orange hover:text-white text-collage-ink font-display font-bold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all"
+                disabled={creatingProduct}
+                className="w-full py-3 bg-collage-lime hover:bg-collage-orange hover:text-white text-collage-ink font-display font-bold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all disabled:opacity-60"
               >
-                🚀 Guardar en la Base de Datos (POST)
+                {creatingProduct ? "Guardando..." : "🚀 Guardar en el Catálogo"}
               </button>
             </form>
           </div>
         )}
 
-        {/* Consola de Logs en Vivo */}
-        <div className="bg-collage-ink text-green-400 p-5 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] font-mono text-xs">
-          <div className="flex items-center justify-between mb-3 border-b border-white/20 pb-2">
-            <span className="font-display text-white text-sm font-semibold flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block animate-ping"></span>
-              Consola de Peticiones HTTP (Endpoints Tester)
-            </span>
-            <button
-              onClick={() => setLogs([])}
-              className="text-white/60 hover:text-white text-[11px]"
-            >
-              Limpiar Logs
-            </button>
-          </div>
-          <div className="space-y-1 max-h-48 overflow-y-auto">
-            {logs.length === 0 ? (
-              <p className="text-white/40 italic">
-                Presiona cualquier botón de arriba para ver las peticiones a la API en tiempo real...
-              </p>
-            ) : (
-              logs.map((log, idx) => (
-                <div key={idx} className="leading-relaxed break-all">
-                  {log}
+        {/* IMPORTAR INVENTARIO */}
+        {activeTab === "importar" && (
+          <div className="bg-white p-6 rounded-2xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h3 className="font-display font-bold text-xl text-collage-ink">Importar Inventario</h3>
+                <p className="text-sm text-slate-500">
+                  Sube un CSV o Excel para crear productos nuevos o actualizar precio y stock por SKU.
+                </p>
+              </div>
+              <button
+                onClick={handleDownloadTemplate}
+                className="text-xs font-display font-bold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border-2 border-collage-ink rounded-lg whitespace-nowrap"
+              >
+                📄 Descargar plantilla CSV
+              </button>
+            </div>
+
+            <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-collage-ink rounded-xl p-6 cursor-pointer hover:bg-slate-50 transition-all">
+              <span className="text-3xl">📁</span>
+              <span className="font-display font-semibold text-sm text-collage-ink">
+                Haz clic para elegir un archivo CSV o Excel (.xlsx)
+              </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileSelected}
+                className="hidden"
+              />
+            </label>
+
+            {importParseError && (
+              <div className="p-3 bg-red-50 border-2 border-red-400 rounded-xl">
+                <p className="text-sm font-semibold text-red-600">{importParseError}</p>
+              </div>
+            )}
+
+            {productsLoading && importRows.length > 0 && products.length === 0 && (
+              <p className="text-sm font-semibold text-collage-ink/60">Cargando inventario actual para comparar SKUs...</p>
+            )}
+
+            {importPreview.length > 0 && (
+              <>
+                <div className="flex items-center gap-4 text-sm font-bold flex-wrap">
+                  <span className="text-green-700">✓ {importCounts.crear} nuevos</span>
+                  <span className="text-blue-700">↻ {importCounts.actualizar} a actualizar</span>
+                  {importCounts.error > 0 && <span className="text-red-600">⚠ {importCounts.error} con errores</span>}
                 </div>
-              ))
+
+                <div className="overflow-x-auto max-h-80 overflow-y-auto border-2 border-collage-ink rounded-xl">
+                  <table className="w-full text-left text-sm">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="border-b-2 border-collage-ink text-xs uppercase font-display text-slate-600">
+                        <th className="py-2 px-2">Fila</th>
+                        <th className="py-2 px-2">SKU</th>
+                        <th className="py-2 px-2">Nombre</th>
+                        <th className="py-2 px-2">Precio</th>
+                        <th className="py-2 px-2">Stock</th>
+                        <th className="py-2 px-2">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {importPreview.map((row) => (
+                        <tr key={row.rowNumber}>
+                          <td className="py-2 px-2 text-slate-400">{row.rowNumber}</td>
+                          <td className="py-2 px-2 font-mono text-xs">{row.sku || "—"}</td>
+                          <td className="py-2 px-2">{row.nombre || "—"}</td>
+                          <td className="py-2 px-2">{row.precio ?? "—"}</td>
+                          <td className="py-2 px-2">{row.stock ?? "—"}</td>
+                          <td className="py-2 px-2">
+                            {row.action === "crear" && <span className="text-green-700 font-bold text-xs">Nuevo</span>}
+                            {row.action === "actualizar" && (
+                              <span className="text-blue-700 font-bold text-xs">Actualiza</span>
+                            )}
+                            {row.action === "error" && (
+                              <span className="text-red-600 font-bold text-xs">{row.error}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <button
+                  onClick={handleConfirmImport}
+                  disabled={importing || importCounts.crear + importCounts.actualizar === 0}
+                  className="px-5 py-3 bg-collage-lime hover:bg-collage-orange hover:text-white text-collage-ink font-display font-bold rounded-xl border-[3px] border-collage-ink shadow-[4px_4px_0_0_var(--color-collage-ink)] transition-all disabled:opacity-50"
+                >
+                  {importing
+                    ? `Importando... (${importProgress}/${importPreview.length})`
+                    : `Confirmar Importación (${importCounts.crear + importCounts.actualizar} filas)`}
+                </button>
+              </>
+            )}
+
+            {importSummary && (
+              <div className="p-4 bg-green-50 border-2 border-green-400 rounded-xl space-y-2">
+                <p className="font-semibold text-green-800">
+                  🎉 {importSummary.created} productos creados, {importSummary.updated} actualizados.
+                </p>
+                {importSummary.errors.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-red-700 text-sm mb-1">
+                      {importSummary.errors.length} filas con error:
+                    </p>
+                    <ul className="text-xs text-red-600 list-disc pl-5 space-y-0.5">
+                      {importSummary.errors.map((e, i) => (
+                        <li key={i}>
+                          Fila {e.row} ({e.sku}): {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        </div>
-
+        )}
       </div>
     </div>
   );
