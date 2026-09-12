@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { getProductVisual } from "@/lib/productVisuals";
+import { formatPrice } from "@/lib/currency";
 
 export default function Cart() {
   const {
@@ -112,7 +113,7 @@ export default function Cart() {
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <span className="font-bold text-collage-indigo">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatPrice(item.price * item.quantity)}
                       </span>
                       <div className="flex items-center gap-2">
                         <button
@@ -143,7 +144,7 @@ export default function Cart() {
           <div className="flex items-center justify-between mb-4">
             <span className="text-collage-ink/70 font-medium">Subtotal</span>
             <span className="font-display font-semibold text-2xl text-collage-ink">
-              ${cartTotal.toFixed(2)}
+              {formatPrice(cartTotal)}
             </span>
           </div>
           {items.length === 0 ? (

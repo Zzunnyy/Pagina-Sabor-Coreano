@@ -5,6 +5,7 @@ import { useState } from "react";
 import CollageSticker from "@/components/CollageSticker";
 import { useCart } from "@/context/CartContext";
 import { getProductVisual } from "@/lib/productVisuals";
+import { formatPrice } from "@/lib/currency";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -230,7 +231,7 @@ export default function Checkout() {
                         <p className="text-xs text-collage-ink/60">Cantidad: {item.quantity}</p>
                       </div>
                       <span className="font-bold text-collage-indigo text-sm">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatPrice(item.price * item.quantity)}
                       </span>
                     </div>
                   );
@@ -240,7 +241,7 @@ export default function Checkout() {
               <div className="pt-4 border-t-[3px] border-dashed border-collage-ink/20 flex items-center justify-between">
                 <span className="text-collage-ink/70 font-medium">Total</span>
                 <span className="font-display font-bold text-2xl text-collage-ink">
-                  ${cartTotal.toFixed(2)}
+                  {formatPrice(cartTotal)}
                 </span>
               </div>
             </div>

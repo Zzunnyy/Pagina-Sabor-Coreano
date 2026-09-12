@@ -5,12 +5,17 @@ const EMOJI_BY_KEYWORD: [string, string][] = [
   ["kimchi", "🥬"],
   ["tteok", "🍢"],
   ["ramen", "🍜"],
+  ["ramyun", "🍜"],
   ["fideo", "🍜"],
   ["soju", "🍶"],
   ["pollo", "🍗"],
   ["arroz", "🍚"],
   ["mandu", "🥟"],
   ["bibimbap", "🍲"],
+  ["jugo", "🧃"],
+  ["helado", "🍨"],
+  ["choco pie", "🍫"],
+  ["choco", "🍫"],
 ];
 
 function pickFromId(id: string, options: string[]) {
