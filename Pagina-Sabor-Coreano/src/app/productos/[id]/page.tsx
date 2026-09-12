@@ -6,15 +6,24 @@ import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
 import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/context/CartContext";
-import { PRODUCTS } from "@/data/products";
+import { useCatalog } from "@/hooks/useCatalog";
 import { getProductVisual } from "@/lib/productVisuals";
 import { formatPrice } from "@/lib/currency";
 
 export default function ProductoDetalle() {
   const params = useParams<{ id: string }>();
   const { addToCart, toggleCart } = useCart();
+  const { products, loading } = useCatalog();
 
-  const product = PRODUCTS.find((p) => p.id === params.id);
+  const product = products.find((p) => p.id === params.id);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-collage-cream">
+        <p className="text-collage-ink/60 text-xl font-medium">Cargando producto...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -38,7 +47,7 @@ export default function ProductoDetalle() {
 
   const { bg, emoji, rotate } = getProductVisual(product.id, product.name);
 
-  const relatedProducts = PRODUCTS.filter(
+  const relatedProducts = products.filter(
     (p) => p.category === product.category && p.id !== product.id
   ).slice(0, 3);
 

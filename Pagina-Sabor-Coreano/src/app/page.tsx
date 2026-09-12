@@ -5,7 +5,7 @@ import Link from "next/link";
 import CollageFrame from "@/components/CollageFrame";
 import CollageSticker from "@/components/CollageSticker";
 import ProductCard from "@/components/ProductCard";
-import { CATEGORIES, PRODUCTS } from "@/data/products";
+import { useCatalog } from "@/hooks/useCatalog";
 
 interface Slide {
   badges: { label: string; bg: string; text?: string; rotate: number }[];
@@ -77,8 +77,9 @@ export default function Home() {
   }, []);
 
   const slide = SLIDES[activeSlide];
+  const { products, categories, loading, error } = useCatalog();
 
-  const filteredProducts = PRODUCTS.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "todos" || product.category === activeCategory;
@@ -253,7 +254,7 @@ export default function Home() {
           {/* Category Filters & Product Grid */}
           <div className="flex flex-col">
             <div className="flex flex-wrap gap-3 mb-10 justify-center">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button key={cat.slug} onClick={() => setActiveCategory(cat.slug)}>
                   <CollageSticker
                     bg={activeCategory === cat.slug ? "bg-collage-indigo" : "bg-white"}
@@ -267,7 +268,17 @@ export default function Home() {
               ))}
             </div>
 
-            {filteredProducts.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-collage-ink/60 text-xl font-medium">Cargando productos...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-collage-ink/60 text-xl font-medium">
+                  No se pudo conectar con el servidor. Intenta de nuevo más tarde.
+                </p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-collage-ink/60 text-xl font-medium">No se encontraron productos para "{searchQuery}"</p>
               </div>

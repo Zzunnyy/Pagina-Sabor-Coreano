@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Imports\ProductsImport;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+
+/*Metodo import recibe el excel y lo envia productsImport*/
 
 class ProductController extends Controller
 {
@@ -15,7 +19,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $productos = Product::all();
+        $productos = Product::with(['category', 'images'])->where('es_activo', true)->get();
         return response()->json($productos);
     }
 
@@ -76,5 +80,30 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Importa productos desde un Excel (panel de administración).
+     * Crea categorías/productos nuevos y actualiza precio/descripción
+     * de los productos que ya existan (match por nombre + categoría).
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'excel' => ['required', 'file', 'mimes:xlsx,xls,csv'],
+        ]);
+
+        $import = new ProductsImport();
+
+        Excel::import($import, $request->file('excel'));
+
+        return response()->json([
+            'creados' => $import->creados,
+            'actualizados' => $import->actualizados,
+            'omitidos' => $import->omitidos,
+            'total_creados' => count($import->creados),
+            'total_actualizados' => count($import->actualizados),
+            'total_omitidos' => count($import->omitidos),
+        ]);
     }
 }

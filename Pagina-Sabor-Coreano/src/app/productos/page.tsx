@@ -3,13 +3,14 @@
 import { useState } from "react";
 import CollageSticker from "@/components/CollageSticker";
 import ProductCard from "@/components/ProductCard";
-import { CATEGORIES, PRODUCTS } from "@/data/products";
+import { useCatalog } from "@/hooks/useCatalog";
 
 export default function Productos() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("todos");
+  const { products, categories, loading, error } = useCatalog();
 
-  const filteredProducts = PRODUCTS.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -61,7 +62,7 @@ export default function Productos() {
 
           {/* Category Filters */}
           <div className="flex flex-wrap gap-3 mb-10 justify-center">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button key={cat.slug} onClick={() => setActiveCategory(cat.slug)}>
                 <CollageSticker
                   bg={activeCategory === cat.slug ? "bg-collage-indigo" : "bg-white"}
@@ -76,7 +77,17 @@ export default function Productos() {
           </div>
 
           {/* Product Grid */}
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-16">
+              <p className="text-collage-ink/60 text-xl font-medium">Cargando productos...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-collage-ink/60 text-xl font-medium">
+                No se pudo conectar con el servidor. Intenta de nuevo más tarde.
+              </p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-collage-ink/60 text-xl font-medium">
                 No se encontraron productos para &quot;{searchQuery}&quot;
